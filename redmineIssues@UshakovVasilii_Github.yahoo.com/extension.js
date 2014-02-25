@@ -6,6 +6,7 @@ const Main = imports.ui.main;
 const Soup = imports.gi.Soup;
 const Util = imports.misc.util;
 const Lang = imports.lang;
+const Gio = imports.gi.Gio;
 
 const session = new Soup.SessionAsync();
 Soup.Session.prototype.add_feature.call(session, new Soup.ProxyResolverDefault());
@@ -32,7 +33,7 @@ RedmineIssues.prototype = {
 		PanelMenu.Button.prototype._init.call(this, St.Align.START);
 
 		this.actor.add_actor(new St.Icon({
-			icon_name: 'emblem-documents-symbolic',
+			gicon: Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-symbolic.svg'),
 			style_class: 'system-status-icon'
 		}));
 

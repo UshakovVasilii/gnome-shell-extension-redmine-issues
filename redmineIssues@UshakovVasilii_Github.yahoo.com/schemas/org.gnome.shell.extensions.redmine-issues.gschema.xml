@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+	<schema id="org.gnome.shell.extensions.redmine-issues" path="/org/gnome/shell/extensions/redmine-issues/">
+		<key name="redmine-url" type="s">
+			<default>'http://'</default>
+			<summary>Readmine URL</summary>
+		</key>
+		<key name="api-access-key" type="s">
+			<default>''</default>
+			<summary>API access key</summary>
+		</key>
+		<key name="issues" type="as">
+			<default>[]</default>
+			<summary>Issues</summary>
+		</key>
+	</schema>
+</schemalist>

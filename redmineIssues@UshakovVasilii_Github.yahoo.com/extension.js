@@ -98,12 +98,13 @@ RedmineIssues.prototype = {
 		}
 		this._schema.set_strv('issues', issues);
 
-		this._issueItems[issue.project.name][issue.id].destroy();
-		delete this._issueItems[issue.project.name][issue.id];
-		if(Object.keys(this._issueItems[issue.project.name]).length==0){
-			delete this._issueItems[issue.project.name];
-			this._issueGroupItems[issue.project.name].destroy();
-			delete this._issueGroupItems[issue.project.name];
+		let projectId = issue.project.id;
+		this._issueItems[projectId][issue.id].destroy();
+		delete this._issueItems[projectId][issue.id];
+		if(Object.keys(this._issueItems[projectId]).length==0){
+			delete this._issueItems[projectId];
+			this._issueGroupItems[projectId].destroy();
+			delete this._issueGroupItems[projectId];
 		}
 	},
 
@@ -127,14 +128,15 @@ RedmineIssues.prototype = {
 			Util.spawn(['xdg-open', url]);
 		});
 		
-		let issueItem = this._issueGroupItems[issue.project.name];
+		let projectId = issue.project.id;
+		let issueItem = this._issueGroupItems[projectId];
 		if(!issueItem){
 			issueItem = new PopupMenu.PopupSubMenuMenuItem(issue.project.name);
-			this._issueGroupItems[issue.project.name] = issueItem;
-			this._issueItems[issue.project.name] = {};
+			this._issueGroupItems[projectId] = issueItem;
+			this._issueItems[projectId] = {};
 			this.menu.addMenuItem(issueItem, 0);
 		}
-		this._issueItems[issue.project.name][issue.id] = item;
+		this._issueItems[projectId][issue.id] = item;
 		issueItem.menu.addMenuItem(item);
 	},
 

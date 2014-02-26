@@ -1,3 +1,7 @@
 .ri-command-popup {
 	min-width:500px;
 }
+
+.ri-popup-status-menu-item-new {
+	font-style: oblique;
+}

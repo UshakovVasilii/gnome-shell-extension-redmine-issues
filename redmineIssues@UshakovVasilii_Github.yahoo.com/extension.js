@@ -168,7 +168,8 @@ RedmineIssues.prototype = {
 
 		session.queue_message(request, function(session, response) {
 			let i=JSON.parse(response.response_body.data).issue;		
-			foo({id:i.id, subject:i.subject, status:i.status, assigned_to:i.assigned_to, project:i.project})
+			foo({id:i.id, subject:i.subject, status:i.status, assigned_to:i.assigned_to, project:i.project,
+				tracker:i.tracker, done_ratio:i.done_ratio, author:i.author,priority:i.priority})
 		});
 	},
 

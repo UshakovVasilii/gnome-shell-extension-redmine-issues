@@ -13,5 +13,33 @@
 			<default>[]</default>
 			<summary>Issues</summary>
 		</key>
+		<key name="show-status-item-status" type="b">
+			<default>true</default>
+			<summary>Show Status</summary>
+		</key>
+		<key name="show-status-item-tracker" type="b">
+			<default>false</default>
+			<summary>Show Tracker</summary>
+		</key>
+		<key name="show-status-item-done-ratio" type="b">
+			<default>false</default>
+			<summary>Show Done Ratio</summary>
+		</key>
+		<key name="show-status-item-author" type="b">
+			<default>false</default>
+			<summary>Show Author</summary>
+		</key>
+		<key name="show-status-item-project" type="b">
+			<default>false</default>
+			<summary>Show Project</summary>
+		</key>
+		<key name="show-status-item-assigned-to" type="b">
+			<default>true</default>
+			<summary>Show Assigned To</summary>
+		</key>
+		<key name="show-status-item-priority" type="b">
+			<default>false</default>
+			<summary>Show Priority</summary>
+		</key>
 	</schema>
 </schemalist>

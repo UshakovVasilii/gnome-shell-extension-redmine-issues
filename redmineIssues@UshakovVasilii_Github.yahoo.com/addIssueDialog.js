@@ -60,7 +60,10 @@ const AddIssueDialog = new Lang.Class({
     },
 
     _onOkButton: function() {
-        this.callback(this._entryText.get_text());
+	let text = this._entryText.get_text();
+	if(text)
+		text = text.replace(/[^0-9]/g, '');
+        this.callback(text);
         this.close();
     }
 });

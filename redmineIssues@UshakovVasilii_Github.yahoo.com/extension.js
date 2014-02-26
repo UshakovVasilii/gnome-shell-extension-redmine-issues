@@ -160,13 +160,21 @@ RedmineIssues.prototype = {
 
 	_addStatusLabels : function(item){
 		let issue = this._issues[item.issueId]
-		this._addStatusLabel({item : item, key : 'show-status-item-status', value : issue.status.name});
-		this._addStatusLabel({item : item, key : 'show-status-item-assigned-to', value : issue.assigned_to.name});
-		this._addStatusLabel({item : item, key : 'show-status-item-tracker', value : issue.tracker.name});
-		this._addStatusLabel({item : item, key : 'show-status-item-priority', value : issue.priority.name});
-		this._addStatusLabel({item : item, key : 'show-status-item-done-ratio', value : issue.done_ratio + '%'});
-		this._addStatusLabel({item : item, key : 'show-status-item-author', value : issue.author.name});
-		this._addStatusLabel({item : item, key : 'show-status-item-project', value : issue.project.name});
+
+		if(issue.status)
+			this._addStatusLabel({item : item, key : 'show-status-item-status', value : issue.status.name});
+		if(issue.assigned_to)
+			this._addStatusLabel({item : item, key : 'show-status-item-assigned-to', value : issue.assigned_to.name});
+		if(issue.tracker)
+			this._addStatusLabel({item : item, key : 'show-status-item-tracker', value : issue.tracker.name});
+		if(issue.priority)
+			this._addStatusLabel({item : item, key : 'show-status-item-priority', value : issue.priority.name});
+		if(issue.done_ratio || issue.done_ratio==0)
+			this._addStatusLabel({item : item, key : 'show-status-item-done-ratio', value : issue.done_ratio + '%'});
+		if(issue.author)
+			this._addStatusLabel({item : item, key : 'show-status-item-author', value : issue.author.name});
+		if(issue.project)
+			this._addStatusLabel({item : item, key : 'show-status-item-project', value : issue.project.name});
 	},
 
 	_addIssueMenuItem : function(issue){
@@ -214,9 +222,13 @@ RedmineIssues.prototype = {
 		request.request_headers.append('X-Redmine-API-Key', this._schema.get_string('api-access-key'));
 
 		session.queue_message(request, function(session, response) {
-			let i=JSON.parse(response.response_body.data).issue;		
-			foo({id:i.id, subject:i.subject, status:i.status, assigned_to:i.assigned_to, project:i.project,
-				tracker:i.tracker, done_ratio:i.done_ratio, author:i.author,priority:i.priority})
+			if(response.status_code == 200){
+				let i=JSON.parse(response.response_body.data).issue;		
+				foo({id:i.id, subject:i.subject, status:i.status, assigned_to:i.assigned_to, project:i.project,
+					tracker:i.tracker, done_ratio:i.done_ratio, author:i.author,priority:i.priority});
+			} else {
+				Main.notify(_('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
+			}
 		});
 	}
 };

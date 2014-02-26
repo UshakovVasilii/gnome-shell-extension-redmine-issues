@@ -42,19 +42,20 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
 		let i = 0;
 
 		this._addSwitch({tab : displayTab, key : 'show-status-item-status', label : _('Show Status'), y : i++});
+		this._addSwitch({tab : displayTab, key : 'show-status-item-assigned-to', label : _('Show Assigned To'), y : i++});
 		this._addSwitch({tab : displayTab, key : 'show-status-item-tracker', label : _('Show Tracker'), y : i++});
+		this._addSwitch({tab : displayTab, key : 'show-status-item-priority', label : _('Show Priority'), y : i++});
 		this._addSwitch({tab : displayTab, key : 'show-status-item-done-ratio', label : _('Show Done Ratio'), y : i++});
 		this._addSwitch({tab : displayTab, key : 'show-status-item-author', label : _('Show Author'), y : i++});
 		this._addSwitch({tab : displayTab, key : 'show-status-item-project', label : _('Show Project'), y : i++});
-		this._addSwitch({tab : displayTab, key : 'show-status-item-assigned-to', label : _('Show Assigned To'), y : i++});
-		this._addSwitch({tab : displayTab, key : 'show-status-item-priority', label : _('Show Priority'), y : i++});
+
 	},
 
 	_addSwitch : function(params){
 		params.tab.attach(new Gtk.Label({ label: params.label}), 0, params.y, 1, 1);
 		let sw = new Gtk.Switch();
 		params.tab.attach(sw, 1, params.y, 1, 1);
-		this._settings.bind(params.key, sw, 'active', Gio.SettingsBindFlags.DEFAULT)
+		this._settings.bind(params.key, sw, 'active', Gio.SettingsBindFlags.DEFAULT);
 	}
 });
 

@@ -19,6 +19,9 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const AddIssueDialog = Me.imports.addIssueDialog;
 
+
+let redmineIssues = null;
+
 function RedmineIssues() {
 	this._init();
 }
@@ -66,13 +69,38 @@ RedmineIssues.prototype = {
             		child: new St.Icon({icon_name: 'view-refresh-symbolic'}),
 			style_class: 'system-menu-action'
 		});
-		refreshButton.connect('clicked', Lang.bind(this, this._refreshCliecked));
+		refreshButton.connect('clicked', Lang.bind(this, this._refreshClicked));
 		commandMenuItem.actor.add(refreshButton, { expand: true, x_fill: false });
 
 		this.menu.addMenuItem(commandMenuItem);
+
+		this._schema.connect('changed::show-status-item-status', Lang.bind(this, this._reloadStatusLabels));
+		this._schema.connect('changed::show-status-item-assigned-to', Lang.bind(this, this._reloadStatusLabels));
+		this._schema.connect('changed::show-status-item-tracker', Lang.bind(this, this._reloadStatusLabels));
+		this._schema.connect('changed::show-status-item-priority', Lang.bind(this, this._reloadStatusLabels));
+		this._schema.connect('changed::show-status-item-done-ratio', Lang.bind(this, this._reloadStatusLabels));
+		this._schema.connect('changed::show-status-item-author', Lang.bind(this, this._reloadStatusLabels));
+		this._schema.connect('changed::show-status-item-project', Lang.bind(this, this._reloadStatusLabels));
 	},
 
-	_refreshCliecked : function() {
+	_reloadStatusLabels : function(){
+		global.log('[REDMINE SETTINGS CHANGED]' + this._issueItems);
+		for(let groupKey in this._issueItems){
+			global.log('[REDMINE GROUP CHANGED]');
+			for(let itemKey in this._issueItems[groupKey]){
+				global.log('[REDMINE ITEM CHANGED]');
+				let item = this._issueItems[groupKey][itemKey];
+
+				for(let labelKey in item.statusLabels){
+					item.statusLabels[labelKey].destroy();
+				}
+				item.statusLabels = {};
+				this._addStatusLabels(item);
+			}
+		}
+	},
+
+	_refreshClicked : function() {
 		let _this = this;
 		for(let i in this._issues){
 			let oldIssue = this._issues[i];
@@ -122,13 +150,39 @@ RedmineIssues.prototype = {
 		}
 	},
 
+	_addStatusLabel : function(params){
+		if(this._schema.get_boolean(params.key)){
+			let label = new St.Label({text: params.value, style_class: 'popup-status-menu-item'});
+			params.item.statusLabels[params.key] = label;
+			params.item.statusLabelsBox.add(label);
+		}
+	},
+
+	_addStatusLabels : function(item){
+		let issue = this._issues[item.issueId]
+		this._addStatusLabel({item : item, key : 'show-status-item-status', value : issue.status.name});
+		this._addStatusLabel({item : item, key : 'show-status-item-assigned-to', value : issue.assigned_to.name});
+		this._addStatusLabel({item : item, key : 'show-status-item-tracker', value : issue.tracker.name});
+		this._addStatusLabel({item : item, key : 'show-status-item-priority', value : issue.priority.name});
+		this._addStatusLabel({item : item, key : 'show-status-item-done-ratio', value : issue.done_ratio + '%'});
+		this._addStatusLabel({item : item, key : 'show-status-item-author', value : issue.author.name});
+		this._addStatusLabel({item : item, key : 'show-status-item-project', value : issue.project.name});
+	},
+
 	_addIssueMenuItem : function(issue){
 		let _this = this;
 		let item = new PopupMenu.PopupBaseMenuItem();
+		item.issueId = issue.id;
 
+		item.statusLabels = {};
+		
 		item.actor.add(
 			new St.Label({text: '#' + issue.id + ' - ' + issue.subject}),
 			{x_fill: true, expand: true});
+
+		item.statusLabelsBox = new St.BoxLayout({style_class: 'ri-popup-menu-item-status-labels'});
+		item.actor.add(item.statusLabelsBox);
+		this._addStatusLabels(item);
 
 		let removeIssueButton = new St.Button({
             		child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
@@ -136,13 +190,6 @@ RedmineIssues.prototype = {
 		removeIssueButton.connect('clicked', function(){
 			_this._removeIssueClicked(issue);
 		});
-
-		item.assignedToLabel = new St.Label({text: issue.assigned_to.name, style_class: 'popup-status-menu-item'});
-		item.actor.add(item.assignedToLabel);
-		
-		item.statusLabel = new St.Label({text: issue.status.name, style_class: 'popup-status-menu-item'});
-		item.actor.add(item.statusLabel);
-
 		item.actor.add(removeIssueButton);
 
 		item.connect('activate', function() {
@@ -171,20 +218,22 @@ RedmineIssues.prototype = {
 			foo({id:i.id, subject:i.subject, status:i.status, assigned_to:i.assigned_to, project:i.project,
 				tracker:i.tracker, done_ratio:i.done_ratio, author:i.author,priority:i.priority})
 		});
-	},
-
-	enable: function() {
-		Main.panel.menuManager.addMenu(this.menu);
-		Main.panel.addToStatusArea('redmineIssues', this);
-	},
-
-	disable: function() {
-		Main.panel.menuManager.removeMenu(this.menu);
-	},
+	}
 };
 
 function init() {
 	Convenience.initTranslations();
-	return new RedmineIssues();
-}
+};
+
+
+
+function enable() {
+	redmineIssues = new RedmineIssues();
+	Main.panel.addToStatusArea('redmineIssues', redmineIssues);
+};
+
+function disable() {
+	redmineIssues.destroy();
+	redmineIssues=null;
+};
 

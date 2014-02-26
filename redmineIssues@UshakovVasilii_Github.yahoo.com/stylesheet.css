@@ -5,3 +5,7 @@
 .ri-popup-status-menu-item-new {
 	font-style: oblique;
 }
+
+.ri-popup-menu-item-status-labels {
+	spacing: 1em;
+}

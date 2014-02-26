@@ -110,7 +110,11 @@ RedmineIssues.prototype = {
 
 	_addIssueMenuItem : function(issue){
 		let _this = this;
-		let item = new PopupMenu.PopupMenuItem('#' + issue.id + ' - ' + issue.subject);
+		let item = new PopupMenu.PopupBaseMenuItem();
+
+		item.actor.add(
+			new St.Label({text: '#' + issue.id + ' - ' + issue.subject}),
+			{x_fill: true, expand: true});
 
 		let removeIssueButton = new St.Button({
             		child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
@@ -119,8 +123,7 @@ RedmineIssues.prototype = {
 			_this._removeIssueClicked(issue);
 		});
 
-		item.actor.add(new St.Label({text: issue.assigned_to.name}));
-		item.actor.add(new St.Label({text: issue.status.name}));
+		item.actor.add(new St.Label({text: issue.assigned_to.name + ', ' + issue.status.name, style_class: 'popup-status-menu-item'}));
 		item.actor.add(removeIssueButton);
 
 		item.connect('activate', function() {

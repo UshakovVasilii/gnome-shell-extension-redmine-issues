@@ -66,10 +66,24 @@ RedmineIssues.prototype = {
             		child: new St.Icon({icon_name: 'view-refresh-symbolic'}),
 			style_class: 'system-menu-action'
 		});
-		//refreshButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
+		refreshButton.connect('clicked', Lang.bind(this, this._refreshCliecked));
 		commandMenuItem.actor.add(refreshButton, { expand: true, x_fill: false });
 
 		this.menu.addMenuItem(commandMenuItem);
+	},
+
+	_refreshCliecked : function() {
+		let _this = this;
+		for(let i in this._issues){
+			let oldIssue = this._issues[i];
+			this._loadIssue(oldIssue.id, function(newIssue) {
+				let item = _this._issueItems[oldIssue.project.id][newIssue.id];
+				if(oldIssue.status.id != newIssue.status.id)
+					item.statusLabel.style_class = 'ri-popup-status-menu-item-new';
+				if(oldIssue.assigned_to.id != newIssue.assigned_to.id)
+					item.assignedToLabel.style_class = 'ri-popup-status-menu-item-new';
+			});
+		}
 	},
 
 	_addIssueClicked : function() {
@@ -123,7 +137,12 @@ RedmineIssues.prototype = {
 			_this._removeIssueClicked(issue);
 		});
 
-		item.actor.add(new St.Label({text: issue.assigned_to.name + ', ' + issue.status.name, style_class: 'popup-status-menu-item'}));
+		item.assignedToLabel = new St.Label({text: issue.assigned_to.name, style_class: 'popup-status-menu-item'});
+		item.actor.add(item.assignedToLabel);
+		
+		item.statusLabel = new St.Label({text: issue.status.name, style_class: 'popup-status-menu-item'});
+		item.actor.add(item.statusLabel);
+
 		item.actor.add(removeIssueButton);
 
 		item.connect('activate', function() {

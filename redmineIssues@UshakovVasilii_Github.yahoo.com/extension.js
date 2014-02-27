@@ -18,6 +18,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const AddIssueDialog = Me.imports.addIssueDialog;
+const ConfirmDialog = Me.imports.confirmDialog;
 
 
 let redmineIssues = null;
@@ -149,7 +150,6 @@ RedmineIssues.prototype = {
 	},
 
 	_addIssueClicked : function() {
-		this.menu.close();
 		let _this = this;
 		let addIssueDialog = new AddIssueDialog.AddIssueDialog(function(issueId){
 			_this._loadIssue(issueId, function(issue) {
@@ -163,10 +163,24 @@ RedmineIssues.prototype = {
 				}
 			});
 		});
+		this.menu.close();
 		addIssueDialog.open();
         },
 
 	_removeIssueClicked : function(issue){
+		let _this = this;
+		let confirmDialog = new ConfirmDialog.ConfirmDialog(
+			_('Confirm #%s removal').format(issue.id),
+			_('Select OK to delete \n"%s"\n or cancel to abort').format(issue.subject),
+			function() {
+				_this._removeIssue(issue);
+			}
+		);
+		this.menu.close();
+        	confirmDialog.open();
+	},
+
+	_removeIssue : function(issue){
 		delete this._issues[issue.id];
 		let issues = [];
 		for(let i in this._issues){

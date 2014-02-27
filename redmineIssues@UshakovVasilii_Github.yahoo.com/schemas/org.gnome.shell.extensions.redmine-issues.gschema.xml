@@ -9,6 +9,10 @@
 			<default>''</default>
 			<summary>API access key</summary>
 		</key>
+		<key name="group-by" type="s">
+			<default>'project'</default>
+			<summary>Group By</summary>
+		</key>
 		<key name="issues" type="as">
 			<default>[]</default>
 			<summary>Issues</summary>
@@ -40,6 +44,14 @@
 		<key name="show-status-item-priority" type="b">
 			<default>false</default>
 			<summary>Show Priority</summary>
+		</key>
+		<key name="show-status-item-fixed-version" type="b">
+			<default>false</default>
+			<summary>Show Target Version</summary>
+		</key>
+		<key name="show-status-item-category" type="b">
+			<default>false</default>
+			<summary>Show Category</summary>
 		</key>
 	</schema>
 </schemalist>

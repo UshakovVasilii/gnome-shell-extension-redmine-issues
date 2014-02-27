@@ -32,6 +32,7 @@ RedmineIssues.prototype = {
 	__proto__: PanelMenu.Button.prototype,
 
 	_init: function() {
+		PanelMenu.Button.prototype._init.call(this, St.Align.START);
 		let _this=this;
 		
 		this._LABEL_KEYS = [
@@ -44,25 +45,32 @@ RedmineIssues.prototype = {
 			'show-status-item-project']
 
 		this._settings = Convenience.getSettings();
-		PanelMenu.Button.prototype._init.call(this, St.Align.START);
+		
 
 		this.actor.add_actor(new St.Icon({
 			gicon: Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-symbolic.svg'),
 			style_class: 'system-status-icon'
 		}));
 
-		this._issueGroupItems = {};
-		this._issueItems = {};
-
-		let issues = this._settings.get_strv('issues');
-		
 		this._issuesStorage = new IssueStorage.IssueStorage();
 
+		this._issueGroupItems = {};
+		this._issueItems = {};
 		for(let issueId in this._issuesStorage.issues){
 			_this._addIssueMenuItem(_this._issuesStorage.issues[issueId]);
 		}
 
 		this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+		this.addCommandMenuItem();
+
+		this._settingChangedSignals = [];
+		this._LABEL_KEYS.forEach(function(key){
+			_this._settingChangedSignals.push(_this._settings.connect('changed::show-status-item-status', Lang.bind(_this, _this._reloadStatusLabels)));
+		});
+	},
+
+	addCommandMenuItem : function(){
 		let commandMenuItem = new PopupMenu.PopupBaseMenuItem({
 			reactive: false,
 			can_focus: false,
@@ -83,11 +91,6 @@ RedmineIssues.prototype = {
 		commandMenuItem.actor.add(refreshButton, { expand: true, x_fill: false });
 
 		this.menu.addMenuItem(commandMenuItem);
-
-		this._settingChangedSignals = [];
-		this._LABEL_KEYS.forEach(function(key){
-			_this._settingChangedSignals.push(_this._settings.connect('changed::show-status-item-status', Lang.bind(_this, _this._reloadStatusLabels)));
-		});
 	},
 
 	disconnectSettingChangedSignals : function(){

@@ -19,6 +19,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const AddIssueDialog = Me.imports.addIssueDialog;
 const ConfirmDialog = Me.imports.confirmDialog;
+const IssueStorage = Me.imports.issueStorage;
 
 
 let redmineIssues = null;
@@ -54,12 +55,11 @@ RedmineIssues.prototype = {
 		this._issueItems = {};
 
 		let issues = this._settings.get_strv('issues');
-		this._issues = {};
 		
-		for(let i in issues){
-			let issue = JSON.parse(issues[i]);
-			this._issues[issue.id] = issue;
-			this._addIssueMenuItem(issue);
+		this._issuesStorage = new IssueStorage.IssueStorage();
+
+		for(let issueId in this._issuesStorage.issues){
+			_this._addIssueMenuItem(_this._issuesStorage.issues[issueId]);
 		}
 
 		this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -113,8 +113,8 @@ RedmineIssues.prototype = {
 
 	_refreshClicked : function() {
 		let _this = this;
-		for(let i in this._issues){
-			let oldIssue = this._issues[i];
+		for(let i in this._issuesStorage.issues){
+			let oldIssue = this._issuesStorage.issues[i];
 			this._loadIssue(oldIssue.id, function(newIssue) {
 				let item = _this._issueItems[oldIssue.project.id][newIssue.id];
 
@@ -153,12 +153,7 @@ RedmineIssues.prototype = {
 		let _this = this;
 		let addIssueDialog = new AddIssueDialog.AddIssueDialog(function(issueId){
 			_this._loadIssue(issueId, function(issue) {
-				let i = _this._issues[issue.id];
-				if(!i){
-					_this._issues[issue.id] = issue;
-					let issues = _this._settings.get_strv('issues');
-					issues.push(JSON.stringify(issue));
-					_this._settings.set_strv('issues', issues);
+				if(_this._issuesStorage.addIssue(issue)) {
 					_this._addIssueMenuItem(issue);
 				}
 			});
@@ -181,12 +176,7 @@ RedmineIssues.prototype = {
 	},
 
 	_removeIssue : function(issue){
-		delete this._issues[issue.id];
-		let issues = [];
-		for(let i in this._issues){
-			issues.push(JSON.stringify(this._issues[i]));
-		}
-		this._settings.set_strv('issues', issues);
+		this._issuesStorage.removeIssue(issue.id);
 
 		let projectId = issue.project.id;
 		this._issueItems[projectId][issue.id].destroy();
@@ -207,7 +197,7 @@ RedmineIssues.prototype = {
 	},
 
 	_addStatusLabels : function(item){
-		let issue = this._issues[item.issueId]
+		let issue = this._issuesStorage.issues[item.issueId]
 
 		if(issue.status)
 			this._addStatusLabel({item : item, key : 'show-status-item-status', value : issue.status.name});
@@ -285,8 +275,6 @@ RedmineIssues.prototype = {
 function init() {
 	Convenience.initTranslations();
 };
-
-
 
 function enable() {
 	redmineIssues = new RedmineIssues();

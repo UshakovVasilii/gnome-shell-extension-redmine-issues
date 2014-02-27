@@ -32,7 +32,7 @@ RedmineIssues.prototype = {
 	_init: function() {
 		let _this=this;
 		
-		this._schema = Convenience.getSettings();
+		this._settings = Convenience.getSettings();
 		PanelMenu.Button.prototype._init.call(this, St.Align.START);
 
 		this.actor.add_actor(new St.Icon({
@@ -43,7 +43,7 @@ RedmineIssues.prototype = {
 		this._issueGroupItems = {};
 		this._issueItems = {};
 
-		let issues = this._schema.get_strv('issues');
+		let issues = this._settings.get_strv('issues');
 		this._issues = {};
 		
 		for(let i in issues){
@@ -74,13 +74,25 @@ RedmineIssues.prototype = {
 
 		this.menu.addMenuItem(commandMenuItem);
 
-		this._schema.connect('changed::show-status-item-status', Lang.bind(this, this._reloadStatusLabels));
-		this._schema.connect('changed::show-status-item-assigned-to', Lang.bind(this, this._reloadStatusLabels));
-		this._schema.connect('changed::show-status-item-tracker', Lang.bind(this, this._reloadStatusLabels));
-		this._schema.connect('changed::show-status-item-priority', Lang.bind(this, this._reloadStatusLabels));
-		this._schema.connect('changed::show-status-item-done-ratio', Lang.bind(this, this._reloadStatusLabels));
-		this._schema.connect('changed::show-status-item-author', Lang.bind(this, this._reloadStatusLabels));
-		this._schema.connect('changed::show-status-item-project', Lang.bind(this, this._reloadStatusLabels));
+		this._connectSettingChangedSignals();
+	},
+
+	_connectSettingChangedSignals : function(){
+		this._settingChangedSignals = [];
+		this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-status', Lang.bind(this, this._reloadStatusLabels)));
+		this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-assigned-to', Lang.bind(this, this._reloadStatusLabels)));
+		this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-tracker', Lang.bind(this, this._reloadStatusLabels)));
+		this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-priority', Lang.bind(this, this._reloadStatusLabels)));
+		this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-done-ratio', Lang.bind(this, this._reloadStatusLabels)));
+		this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-author', Lang.bind(this, this._reloadStatusLabels)));
+		this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-project', Lang.bind(this, this._reloadStatusLabels)));
+	},
+
+	disconnectSettingChangedSignals : function(){
+		let settings = this._settings;
+		this._settingChangedSignals.forEach(function(signal){
+			settings.disconnect(signal);
+		});
 	},
 
 	_reloadStatusLabels : function(){
@@ -122,9 +134,9 @@ RedmineIssues.prototype = {
 				let i = _this._issues[issue.id];
 				if(!i){
 					_this._issues[issue.id] = issue;
-					let issues = _this._schema.get_strv('issues');
+					let issues = _this._settings.get_strv('issues');
 					issues.push(JSON.stringify(issue));
-					_this._schema.set_strv('issues', issues);
+					_this._settings.set_strv('issues', issues);
 					_this._addIssueMenuItem(issue);
 				}
 			});
@@ -138,7 +150,7 @@ RedmineIssues.prototype = {
 		for(let i in this._issues){
 			issues.push(JSON.stringify(this._issues[i]));
 		}
-		this._schema.set_strv('issues', issues);
+		this._settings.set_strv('issues', issues);
 
 		let projectId = issue.project.id;
 		this._issueItems[projectId][issue.id].destroy();
@@ -151,7 +163,7 @@ RedmineIssues.prototype = {
 	},
 
 	_addStatusLabel : function(params){
-		if(this._schema.get_boolean(params.key)){
+		if(this._settings.get_boolean(params.key)){
 			let label = new St.Label({text: params.value, style_class: 'popup-status-menu-item'});
 			params.item.statusLabels[params.key] = label;
 			params.item.statusLabelsBox.add(label);
@@ -201,7 +213,7 @@ RedmineIssues.prototype = {
 		item.actor.add(removeIssueButton);
 
 		item.connect('activate', function() {
-			let url = _this._schema.get_string('redmine-url') + 'issues/' + issue.id;
+			let url = _this._settings.get_string('redmine-url') + 'issues/' + issue.id;
 			Util.spawn(['xdg-open', url]);
 		});
 		
@@ -218,15 +230,15 @@ RedmineIssues.prototype = {
 	},
 
 	_loadIssue : function(id, foo){
-		let request = Soup.Message.new('GET', this._schema.get_string('redmine-url') + 'issues/' + id + '.json');
-		request.request_headers.append('X-Redmine-API-Key', this._schema.get_string('api-access-key'));
+		let request = Soup.Message.new('GET', this._settings.get_string('redmine-url') + 'issues/' + id + '.json');
+		request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
 
 		session.queue_message(request, function(session, response) {
 			if(response.status_code == 200){
 				let i=JSON.parse(response.response_body.data).issue;		
 				foo({id:i.id, subject:i.subject, status:i.status, assigned_to:i.assigned_to, project:i.project,
 					tracker:i.tracker, done_ratio:i.done_ratio, author:i.author,priority:i.priority});
-			} else {
+			} else if(response.status_code && response.status_code >= 100) {
 				Main.notify(_('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
 			}
 		});
@@ -245,6 +257,7 @@ function enable() {
 };
 
 function disable() {
+	redmineIssues.disconnectSettingChangedSignals();
 	redmineIssues.destroy();
 	redmineIssues=null;
 };

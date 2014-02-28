@@ -42,7 +42,9 @@ RedmineIssues.prototype = {
 			'show-status-item-priority',
 			'show-status-item-done-ratio',
 			'show-status-item-author',
-			'show-status-item-project']
+			'show-status-item-project',
+			'show-status-item-fixed-version',
+			'show-status-item-category']
 
 		this._settings = Convenience.getSettings();
 		
@@ -66,7 +68,7 @@ RedmineIssues.prototype = {
 
 		this._settingChangedSignals = [];
 		this._LABEL_KEYS.forEach(function(key){
-			_this._settingChangedSignals.push(_this._settings.connect('changed::show-status-item-status', Lang.bind(_this, _this._reloadStatusLabels)));
+			_this._settingChangedSignals.push(_this._settings.connect('changed::' + key, Lang.bind(_this, _this._reloadStatusLabels)));
 		});
 	},
 
@@ -133,6 +135,10 @@ RedmineIssues.prototype = {
 					_this._makeLabelNew({item : item, key : 'show-status-item-done-ratio', value : newIssue.done_ratio + '%'});
 				if(oldIssue.project && oldIssue.project.id != newIssue.project.id)
 					_this._makeLabelNew({item : item, key : 'show-status-item-project', value : newIssue.project.name});
+				if(oldIssue.fixed_version && oldIssue.fixed_version.id != newIssue.fixed_version.id)
+					_this._makeLabelNew({item : item, key : 'show-status-item-fixed-version', value : newIssue.fixed_version.name});
+				if(oldIssue.category && oldIssue.category.id != newIssue.category.id)
+					_this._makeLabelNew({item : item, key : 'show-status-item-category', value : newIssue.category.name});
 			});
 		}
 	},
@@ -216,6 +222,10 @@ RedmineIssues.prototype = {
 			this._addStatusLabel({item : item, key : 'show-status-item-author', value : issue.author.name});
 		if(issue.project)
 			this._addStatusLabel({item : item, key : 'show-status-item-project', value : issue.project.name});
+		if(issue.fixed_version)
+			this._addStatusLabel({item : item, key : 'show-status-item-fixed-version', value : issue.fixed_version.name});
+		if(issue.category)
+			this._addStatusLabel({item : item, key : 'show-status-item-category', value : issue.category.name});
 	},
 
 	_addIssueMenuItem : function(issue){
@@ -266,8 +276,17 @@ RedmineIssues.prototype = {
 		session.queue_message(request, function(session, response) {
 			if(response.status_code == 200){
 				let i=JSON.parse(response.response_body.data).issue;		
-				foo({id:i.id, subject:i.subject, status:i.status, assigned_to:i.assigned_to, project:i.project,
-					tracker:i.tracker, done_ratio:i.done_ratio, author:i.author,priority:i.priority});
+				foo({id:i.id,
+					subject : i.subject,
+					status : i.status,
+					assigned_to : i.assigned_to,
+					project : i.project,
+					tracker : i.tracker,
+					done_ratio : i.done_ratio,
+					author : i.author,
+					priority : i.priority,
+					fixed_version : i.fixed_version,
+					category : i.category});
 			} else if(response.status_code && response.status_code >= 100) {
 				Main.notify(_('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
 			}

@@ -21,6 +21,16 @@ const AddIssueDialog = Me.imports.addIssueDialog;
 const ConfirmDialog = Me.imports.confirmDialog;
 const IssueStorage = Me.imports.issueStorage;
 
+const LABEL_KEYS = [
+	'status',
+	'assigned-to',
+	'tracker',
+	'priority',
+	'done-ratio',
+	'author',
+	'project',
+	'fixed-version',
+	'category'];
 
 let redmineIssues = null;
 
@@ -34,17 +44,6 @@ RedmineIssues.prototype = {
 	_init: function() {
 		PanelMenu.Button.prototype._init.call(this, St.Align.START);
 		let _this=this;
-		
-		this._LABEL_KEYS = [
-			'status',
-			'assigned-to',
-			'tracker',
-			'priority',
-			'done-ratio',
-			'author',
-			'project',
-			'fixed-version',
-			'category'];
 
 		this._settings = Convenience.getSettings();
 		
@@ -60,10 +59,10 @@ RedmineIssues.prototype = {
 
 		this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-		this.addCommandMenuItem();
+		this._addCommandMenuItem();
 
 		this._settingChangedSignals = [];
-		this._LABEL_KEYS.forEach(function(key){
+		LABEL_KEYS.forEach(function(key){
 			_this._settingChangedSignals.push(_this._settings.connect('changed::show-status-item-' + key, Lang.bind(_this, _this._reloadStatusLabels)));
 		});
 		this._settingChangedSignals.push(this._settings.connect('changed::group-by', Lang.bind(this, this._groupByChanged)));
@@ -86,7 +85,7 @@ RedmineIssues.prototype = {
 		this._addIssueMenuItems();
 	},
 
-	addCommandMenuItem : function(){
+	_addCommandMenuItem : function(){
 		let commandMenuItem = new PopupMenu.PopupBaseMenuItem({
 			reactive: false,
 			can_focus: false,
@@ -140,7 +139,7 @@ RedmineIssues.prototype = {
 				let item = _this._issueItems[groupId][newIssue.id];
 				// TODO
 
-				_this._LABEL_KEYS.forEach(function(key){
+				LABEL_KEYS.forEach(function(key){
 					if(key == 'done-ratio' && (oldIssue.done_ratio || oldIssue.done_ratio==0) && oldIssue.done_ratio != newIssue.done_ratio){
 						_this._makeLabelNew({item : item, key : 'done-ratio', value : newIssue.done_ratio + '%'});
 					} else {
@@ -166,7 +165,7 @@ RedmineIssues.prototype = {
 	},
 
 	_makeLabelsRead : function(item){
-		this._LABEL_KEYS.forEach(function(key){
+		LABEL_KEYS.forEach(function(key){
 			let label = item.statusLabels[key];
 			label.style_class = 'popup-status-menu-item';
 		});
@@ -221,30 +220,10 @@ RedmineIssues.prototype = {
 	},
 
 	_addStatusLabels : function(item){
-		let issue = this._issuesStorage.issues[item.issueId]
-/*
-		if(issue.status)
-			this._addStatusLabel({item : item, key : 'status', value : issue.status.name});
-		if(issue.assigned_to)
-			this._addStatusLabel({item : item, key : 'assigned-to', value : issue.assigned_to.name});
-		if(issue.tracker)
-			this._addStatusLabel({item : item, key : 'tracker', value : issue.tracker.name});
-		if(issue.priority)
-			this._addStatusLabel({item : item, key : 'priority', value : issue.priority.name});
-		if(issue.author)
-			this._addStatusLabel({item : item, key : 'author', value : issue.author.name});
-		if(issue.project)
-			this._addStatusLabel({item : item, key : 'project', value : issue.project.name});
-		if(issue.fixed_version)
-			this._addStatusLabel({item : item, key : 'version', value : issue.fixed_version.name});
-		if(issue.category)
-			this._addStatusLabel({item : item, key : 'category', value : issue.category.name});
-*/
-
-
+		let issue = this._issuesStorage.issues[item.issueId];
 		let _this = this;
 
-		this._LABEL_KEYS.forEach(function(key){
+		LABEL_KEYS.forEach(function(key){
 			if(key == 'done-ratio' && (issue.done_ratio || issue.done_ratio==0)) {
 				_this._addStatusLabel({item : item, key : 'done-ratio', value : issue.done_ratio + '%'});
 			} else {
@@ -252,9 +231,7 @@ RedmineIssues.prototype = {
 				if(issue[jsonKey])
 					_this._addStatusLabel({item : item, key : key, value : issue[jsonKey].name});
 			}
-		}
-
-
+		});
 	},
 
 	_addIssueMenuItem : function(issue){
@@ -300,24 +277,22 @@ RedmineIssues.prototype = {
 		issueItem.menu.addMenuItem(item);
 	},
 
-	_loadIssue : function(id, foo){
+	_loadIssue : function(id, callback){
 		let request = Soup.Message.new('GET', this._settings.get_string('redmine-url') + 'issues/' + id + '.json');
 		request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
 
 		session.queue_message(request, function(session, response) {
 			if(response.status_code == 200){
-				let i=JSON.parse(response.response_body.data).issue;		
-				foo({id:i.id,
-					subject : i.subject,
-					status : i.status,
-					assigned_to : i.assigned_to,
-					project : i.project,
-					tracker : i.tracker,
-					done_ratio : i.done_ratio,
-					author : i.author,
-					priority : i.priority,
-					fixed_version : i.fixed_version,
-					category : i.category});
+				let i=JSON.parse(response.response_body.data).issue;
+
+				let issue = {id:i.id, subject : i.subject};
+				LABEL_KEYS.forEach(function(key){
+					let jsonKey = key.replace('-','_');
+					let value = i[jsonKey];
+					if(value || value==0)
+						issue.push(jsonKey, value);
+				});
+				callback(issue);
 			} else if(response.status_code && response.status_code >= 100) {
 				Main.notify(_('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
 			}

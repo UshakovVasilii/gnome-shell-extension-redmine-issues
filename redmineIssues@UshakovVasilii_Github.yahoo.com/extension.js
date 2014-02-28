@@ -36,15 +36,15 @@ RedmineIssues.prototype = {
 		let _this=this;
 		
 		this._LABEL_KEYS = [
-			'show-status-item-status',
-			'show-status-item-assigned-to',
-			'show-status-item-tracker',
-			'show-status-item-priority',
-			'show-status-item-done-ratio',
-			'show-status-item-author',
-			'show-status-item-project',
-			'show-status-item-fixed-version',
-			'show-status-item-category']
+			'status',
+			'assigned-to',
+			'tracker',
+			'priority',
+			'done-ratio',
+			'author',
+			'project',
+			'fixed-version',
+			'category'];
 
 		this._settings = Convenience.getSettings();
 		
@@ -56,11 +56,7 @@ RedmineIssues.prototype = {
 
 		this._issuesStorage = new IssueStorage.IssueStorage();
 
-		this._issueGroupItems = {};
-		this._issueItems = {};
-		for(let issueId in this._issuesStorage.issues){
-			_this._addIssueMenuItem(_this._issuesStorage.issues[issueId]);
-		}
+		this._addIssueMenuItems();
 
 		this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -68,8 +64,26 @@ RedmineIssues.prototype = {
 
 		this._settingChangedSignals = [];
 		this._LABEL_KEYS.forEach(function(key){
-			_this._settingChangedSignals.push(_this._settings.connect('changed::' + key, Lang.bind(_this, _this._reloadStatusLabels)));
+			_this._settingChangedSignals.push(_this._settings.connect('changed::show-status-item-' + key, Lang.bind(_this, _this._reloadStatusLabels)));
 		});
+		this._settingChangedSignals.push(this._settings.connect('changed::group-by', Lang.bind(this, this._groupByChanged)));
+	},
+
+	_addIssueMenuItems : function(){
+		this._issueGroupItems = {};
+		this._issueItems = {};
+
+		for(let issueId in this._issuesStorage.issues){
+			this._addIssueMenuItem(this._issuesStorage.issues[issueId]);
+		}
+	},
+
+	_groupByChanged : function(){
+		for(let groupId in this._issueGroupItems){
+			this._issueGroupItems[groupId].destroy();
+		}
+
+		this._addIssueMenuItems();
 	},
 
 	addCommandMenuItem : function(){
@@ -118,27 +132,27 @@ RedmineIssues.prototype = {
 
 	_refreshClicked : function() {
 		let _this = this;
+		let groupByKey = _this._settings.get_string('group-by');
 		for(let i in this._issuesStorage.issues){
 			let oldIssue = this._issuesStorage.issues[i];
 			this._loadIssue(oldIssue.id, function(newIssue) {
-				let item = _this._issueItems[oldIssue.project.id][newIssue.id];
+				let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
+				let item = _this._issueItems[groupId][newIssue.id];
+				// TODO
 
-				if(oldIssue.status && oldIssue.status.id != newIssue.status.id)
-					_this._makeLabelNew({item : item, key : 'show-status-item-status', value : newIssue.status.name});
-				if(oldIssue.assigned_to && oldIssue.assigned_to.id != newIssue.assigned_to.id)
-					_this._makeLabelNew({item : item, key : 'show-status-item-assigned-to', value : newIssue.assigned_to.name});
-				if(oldIssue.tracker && oldIssue.tracker.id != newIssue.tracker.id)
-					_this._makeLabelNew({item : item, key : 'show-status-item-tracker', value : newIssue.tracker.name});
-				if(oldIssue.priority && oldIssue.priority.id != newIssue.priority.id)
-					_this._makeLabelNew({item : item, key : 'show-status-item-priority', value : newIssue.priority.name});
-				if((oldIssue.done_ratio || oldIssue.done_ratio==0) && oldIssue.done_ratio != newIssue.done_ratio)
-					_this._makeLabelNew({item : item, key : 'show-status-item-done-ratio', value : newIssue.done_ratio + '%'});
-				if(oldIssue.project && oldIssue.project.id != newIssue.project.id)
-					_this._makeLabelNew({item : item, key : 'show-status-item-project', value : newIssue.project.name});
-				if(oldIssue.fixed_version && oldIssue.fixed_version.id != newIssue.fixed_version.id)
-					_this._makeLabelNew({item : item, key : 'show-status-item-fixed-version', value : newIssue.fixed_version.name});
-				if(oldIssue.category && oldIssue.category.id != newIssue.category.id)
-					_this._makeLabelNew({item : item, key : 'show-status-item-category', value : newIssue.category.name});
+				_this._LABEL_KEYS.forEach(function(key){
+					if(key == 'done-ratio' && (oldIssue.done_ratio || oldIssue.done_ratio==0) && oldIssue.done_ratio != newIssue.done_ratio){
+						_this._makeLabelNew({item : item, key : 'done-ratio', value : newIssue.done_ratio + '%'});
+					} else {
+						let jsonKey = key.replace('-','_');
+						if(oldIssue[jsonKey] && oldIssue[jsonKey].id != newIssue[jsonKey].id)
+							_this._makeLabelNew({item : item, key : key, value : newIssue[jsonKey].name});
+					}
+				});
+
+
+				//_this._removeIssueMenuItem(oldIssue);
+				//_this._addIssueMenuItem(newIssue);
 			});
 		}
 	},
@@ -177,28 +191,29 @@ RedmineIssues.prototype = {
 			_('Confirm #%s removal').format(issue.id),
 			_('Select OK to delete \n"%s"\n or cancel to abort').format(issue.subject),
 			function() {
-				_this._removeIssue(issue);
+				_this._issuesStorage.removeIssue(issue.id);
+				_this._removeIssueMenuItem(issue);
 			}
 		);
 		this.menu.close();
         	confirmDialog.open();
 	},
 
-	_removeIssue : function(issue){
-		this._issuesStorage.removeIssue(issue.id);
+	_removeIssueMenuItem : function(issue){
+		let groupBy = this._settings.get_string('group-by');
 
-		let projectId = issue.project.id;
-		this._issueItems[projectId][issue.id].destroy();
-		delete this._issueItems[projectId][issue.id];
-		if(Object.keys(this._issueItems[projectId]).length==0){
-			delete this._issueItems[projectId];
-			this._issueGroupItems[projectId].destroy();
-			delete this._issueGroupItems[projectId];
+		let groupId = issue[groupBy] ? issue[groupBy].id : -1;
+		this._issueItems[groupId][issue.id].destroy();
+		delete this._issueItems[groupId][issue.id];
+		if(Object.keys(this._issueItems[groupId]).length==0){
+			delete this._issueItems[groupId];
+			this._issueGroupItems[groupId].destroy();
+			delete this._issueGroupItems[groupId];
 		}
 	},
 
 	_addStatusLabel : function(params){
-		if(this._settings.get_boolean(params.key)){
+		if(this._settings.get_boolean('show-status-item-' + params.key)){
 			let label = new St.Label({text: params.value, style_class: 'popup-status-menu-item'});
 			params.item.statusLabels[params.key] = label;
 			params.item.statusLabelsBox.add(label);
@@ -207,25 +222,39 @@ RedmineIssues.prototype = {
 
 	_addStatusLabels : function(item){
 		let issue = this._issuesStorage.issues[item.issueId]
-
+/*
 		if(issue.status)
-			this._addStatusLabel({item : item, key : 'show-status-item-status', value : issue.status.name});
+			this._addStatusLabel({item : item, key : 'status', value : issue.status.name});
 		if(issue.assigned_to)
-			this._addStatusLabel({item : item, key : 'show-status-item-assigned-to', value : issue.assigned_to.name});
+			this._addStatusLabel({item : item, key : 'assigned-to', value : issue.assigned_to.name});
 		if(issue.tracker)
-			this._addStatusLabel({item : item, key : 'show-status-item-tracker', value : issue.tracker.name});
+			this._addStatusLabel({item : item, key : 'tracker', value : issue.tracker.name});
 		if(issue.priority)
-			this._addStatusLabel({item : item, key : 'show-status-item-priority', value : issue.priority.name});
-		if(issue.done_ratio || issue.done_ratio==0)
-			this._addStatusLabel({item : item, key : 'show-status-item-done-ratio', value : issue.done_ratio + '%'});
+			this._addStatusLabel({item : item, key : 'priority', value : issue.priority.name});
 		if(issue.author)
-			this._addStatusLabel({item : item, key : 'show-status-item-author', value : issue.author.name});
+			this._addStatusLabel({item : item, key : 'author', value : issue.author.name});
 		if(issue.project)
-			this._addStatusLabel({item : item, key : 'show-status-item-project', value : issue.project.name});
+			this._addStatusLabel({item : item, key : 'project', value : issue.project.name});
 		if(issue.fixed_version)
-			this._addStatusLabel({item : item, key : 'show-status-item-fixed-version', value : issue.fixed_version.name});
+			this._addStatusLabel({item : item, key : 'version', value : issue.fixed_version.name});
 		if(issue.category)
-			this._addStatusLabel({item : item, key : 'show-status-item-category', value : issue.category.name});
+			this._addStatusLabel({item : item, key : 'category', value : issue.category.name});
+*/
+
+
+		let _this = this;
+
+		this._LABEL_KEYS.forEach(function(key){
+			if(key == 'done-ratio' && (issue.done_ratio || issue.done_ratio==0)) {
+				_this._addStatusLabel({item : item, key : 'done-ratio', value : issue.done_ratio + '%'});
+			} else {
+				let jsonKey = key.replace('-','_');
+				if(issue[jsonKey])
+					_this._addStatusLabel({item : item, key : key, value : issue[jsonKey].name});
+			}
+		}
+
+
 	},
 
 	_addIssueMenuItem : function(issue){
@@ -256,16 +285,18 @@ RedmineIssues.prototype = {
 			Util.spawn(['xdg-open', url]);
 			_this._makeLabelsRead(item);
 		});
+
+		let groupByKey = this._settings.get_string('group-by');
 		
-		let projectId = issue.project.id;
-		let issueItem = this._issueGroupItems[projectId];
+		let groupId = issue[groupByKey] ? issue[groupByKey].id : -1;
+		let issueItem = this._issueGroupItems[groupId];
 		if(!issueItem){
-			issueItem = new PopupMenu.PopupSubMenuMenuItem(issue.project.name);
-			this._issueGroupItems[projectId] = issueItem;
-			this._issueItems[projectId] = {};
+			issueItem = new PopupMenu.PopupSubMenuMenuItem(groupId == -1 ? _('Ungrouped') : issue[groupByKey].name);
+			this._issueGroupItems[groupId] = issueItem;
+			this._issueItems[groupId] = {};
 			this.menu.addMenuItem(issueItem, 0);
 		}
-		this._issueItems[projectId][issue.id] = item;
+		this._issueItems[groupId][issue.id] = item;
 		issueItem.menu.addMenuItem(item);
 	},
 

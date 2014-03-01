@@ -38,6 +38,12 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         generalTab.attach(apiAccessKey, 1, 1, 1, 1);
         this._settings.bind('api-access-key', apiAccessKey, 'text', Gio.SettingsBindFlags.DEFAULT);
 
+        generalTab.attach(new Gtk.Label({ label: _('Auto refresh')}), 0, 2, 1, 1);
+        let autoRefresh = Gtk.SpinButton.new_with_range (30, 60, 1);
+        generalTab.attach(autoRefresh, 1, 2, 1, 1);
+        this._settings.bind('auto-refresh', autoRefresh, 'value', Gio.SettingsBindFlags.DEFAULT);
+        
+
         let displayTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
         this.append_page(displayTab,  new Gtk.Label({label: _('Display')}));
         let i = 0;

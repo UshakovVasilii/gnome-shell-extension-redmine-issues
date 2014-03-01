@@ -39,7 +39,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         this._settings.bind('api-access-key', apiAccessKey, 'text', Gio.SettingsBindFlags.DEFAULT);
 
         generalTab.attach(new Gtk.Label({ label: _('Auto refresh')}), 0, 2, 1, 1);
-        let autoRefresh = Gtk.SpinButton.new_with_range (30, 60, 1);
+        let autoRefresh = Gtk.SpinButton.new_with_range (0, 60, 1);
         generalTab.attach(autoRefresh, 1, 2, 1, 1);
         this._settings.bind('auto-refresh', autoRefresh, 'value', Gio.SettingsBindFlags.DEFAULT);
         
@@ -90,21 +90,32 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         displayTab.attach(group, 1, i++, 1, 1);
 
         // Switches
-        this._addSwitch({tab : displayTab, key : 'show-status-item-status', label : _('Show Status'), y : i++});
-        this._addSwitch({tab : displayTab, key : 'show-status-item-assigned-to', label : _('Show Assigned To'), y : i++});
-        this._addSwitch({tab : displayTab, key : 'show-status-item-tracker', label : _('Show Tracker'), y : i++});
-        this._addSwitch({tab : displayTab, key : 'show-status-item-priority', label : _('Show Priority'), y : i++});
-        this._addSwitch({tab : displayTab, key : 'show-status-item-done-ratio', label : _('Show Done Ratio'), y : i++});
-        this._addSwitch({tab : displayTab, key : 'show-status-item-author', label : _('Show Author'), y : i++});
-        this._addSwitch({tab : displayTab, key : 'show-status-item-project', label : _('Show Project'), y : i++});
-        this._addSwitch({tab : displayTab, key : 'show-status-item-fixed-version', label : _('Show Target Version'), y : i++});
-        this._addSwitch({tab : displayTab, key : 'show-status-item-category', label : _('Show Category'), y : i++});
+        this._addSwitch({tab : displayTab, key : 'show-status-item-status', label : _('Show Status'), y : i++, x : 0});
+        this._addSwitch({tab : displayTab, key : 'show-status-item-assigned-to', label : _('Show Assigned To'), y : i++, x : 0});
+        this._addSwitch({tab : displayTab, key : 'show-status-item-tracker', label : _('Show Tracker'), y : i++, x : 0});
+        this._addSwitch({tab : displayTab, key : 'show-status-item-priority', label : _('Show Priority'), y : i++, x : 0});
+        i=0;
+        this._addSwitch({tab : displayTab, key : 'show-status-item-done-ratio', label : _('Show Done Ratio'), y : i++, x : 2});
+        this._addSwitch({tab : displayTab, key : 'show-status-item-author', label : _('Show Author'), y : i++, x : 2});
+        this._addSwitch({tab : displayTab, key : 'show-status-item-project', label : _('Show Project'), y : i++, x : 2});
+        this._addSwitch({tab : displayTab, key : 'show-status-item-fixed-version', label : _('Show Target Version'), y : i++, x : 2});
+        this._addSwitch({tab : displayTab, key : 'show-status-item-category', label : _('Show Category'), y : i++, x : 2});
+
+        displayTab.attach(new Gtk.Label({ label: _('Max Subject lenght (characters count)')}), 0, i, 3, 1);
+        let maxSubjectLength = Gtk.SpinButton.new_with_range (30, 100, 1);
+        displayTab.attach(maxSubjectLength, 3, i++, 1, 1);
+        this._settings.bind('max-subject-lenght', maxSubjectLength, 'value', Gio.SettingsBindFlags.DEFAULT);
+
+        displayTab.attach(new Gtk.Label({ label: _('Minimum width of Menu Item (px)')}), 0, i, 3, 1);
+        let minMenuItemWidth = Gtk.SpinButton.new_with_range (300, 1000, 10);
+        displayTab.attach(minMenuItemWidth, 3, i++, 1, 1);
+        this._settings.bind('min-menu-item-widh', minMenuItemWidth, 'value', Gio.SettingsBindFlags.DEFAULT);
     },
 
     _addSwitch : function(params){
-        params.tab.attach(new Gtk.Label({ label: params.label}), 0, params.y, 1, 1);
+        params.tab.attach(new Gtk.Label({ label: params.label}), params.x, params.y, 1, 1);
         let sw = new Gtk.Switch();
-        params.tab.attach(sw, 1, params.y, 1, 1);
+        params.tab.attach(sw, params.x + 1, params.y, 1, 1);
         this._settings.bind(params.key, sw, 'active', Gio.SettingsBindFlags.DEFAULT);
     }
 });

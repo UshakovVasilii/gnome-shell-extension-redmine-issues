@@ -57,5 +57,13 @@
 			<default>false</default>
 			<summary>Show Category</summary>
 		</key>
+		<key name="max-subject-lenght" type="i">
+			<default>40</default>
+			<summary>Max Subject Lenght</summary>
+		</key>
+		<key name="min-menu-item-widh" type="i">
+			<default>500</default>
+			<summary>Min Menu Item Width</summary>
+		</key>
 	</schema>
 </schemalist>

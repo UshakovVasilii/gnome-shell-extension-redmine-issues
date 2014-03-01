@@ -13,11 +13,24 @@ const IssueStorage = new Lang.Class({
 		this._settings = Convenience.getSettings();
 		this.issues = {};
 
-		let _this = this;
-		this._settings.get_strv('issues').forEach(function(s){
+		this._settings.get_strv('issues').forEach(Lang.bind(this, function(s){
 			let issue = JSON.parse(s);
-			_this.issues[issue.id] = issue;
-		});
+			this.issues[issue.id] = issue;
+		}));
+	},
+
+	updateIssue : function(issue){
+		if(!this.issues[issue.id])
+			return false;
+		let data = [];
+		delete this.issues[issue.id];
+		data.push(JSON.stringify(issue));
+		for(let i in this.issues){
+			data.push(JSON.stringify(this.issues[i]));
+		}
+		this._settings.set_strv('issues', data);
+		this.issues[issue.id] = issue;
+		return true;
 	},
 
 	addIssue : function(issue){

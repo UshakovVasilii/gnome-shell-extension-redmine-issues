@@ -51,6 +51,13 @@ const IssueStorage = new Lang.Class({
     addIssue : function(issue){
         if(this.issues[issue.id])
             return false;
+        issue.unread_fields = ['subject'];
+        LABEL_KEYS.forEach(function(key){
+            let jsonKey = key.replace('-','_');
+            let value = issue[jsonKey];
+            if(value || value==0)
+                issue.unread_fields.push(jsonKey);
+        });
         let data = this._settings.get_strv('issues');
         data.push(JSON.stringify(issue));
         this._settings.set_strv('issues', data);

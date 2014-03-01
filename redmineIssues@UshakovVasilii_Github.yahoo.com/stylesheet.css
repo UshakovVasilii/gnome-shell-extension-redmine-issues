@@ -1,11 +1,21 @@
 .ri-command-popup {
-	min-width:500px;
+  min-width:600px;
 }
 
 .ri-popup-status-menu-item-new {
-	font-style: oblique;
+  font-style: oblique;
 }
 
 .ri-popup-menu-item-status-labels {
-	spacing: 1em;
+  spacing: 1em;
+}
+
+.ri-issue-label-unread {
+  font-style: oblique;
+  font-weight: bold;
+}
+
+.ri-group-label-unread {
+  font-style: oblique;
+  font-weight: bold;
 }

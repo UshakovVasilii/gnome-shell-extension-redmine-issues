@@ -124,7 +124,7 @@ const RedmineIssues = new Lang.Class({
 
                 let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
                 let item = this._issueItems[groupId][newIssue.id];
-		global.log('[RI] item = ' + item + ' groupId='+ groupId + ' newIssue.id=' + newIssue.id);
+                item.issueLabel.add_style_class_name('ri-issue-label-unread');
 
                 let groupChanged = false;
                 IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
@@ -142,6 +142,8 @@ const RedmineIssues = new Lang.Class({
                 if(groupChanged){
                     this._removeIssueMenuItem(oldIssue);
                     this._addIssueMenuItem(newIssue);
+                } else {
+                    this._refreshGroupStyleClass(groupId);
                 }
             }));
         }
@@ -168,7 +170,6 @@ const RedmineIssues = new Lang.Class({
     _addIssueClicked : function() {
         let addIssueDialog = new AddIssueDialog.AddIssueDialog(Lang.bind(this, function(issueId){
             this._loadIssue(issueId, Lang.bind(this, function(issue) {
-                this._makeIssueUnread(issue);
                 if(this._issuesStorage.addIssue(issue)) {
                     this._addIssueMenuItem(issue);
                 }
@@ -201,6 +202,8 @@ const RedmineIssues = new Lang.Class({
             delete this._issueItems[groupId];
             this._issueGroupItems[groupId].destroy();
             delete this._issueGroupItems[groupId];
+        } else {
+            this._refreshGroupStyleClass(groupId);
         }
     },
 
@@ -231,10 +234,10 @@ const RedmineIssues = new Lang.Class({
         item.issueId = issue.id;
 
         item.statusLabels = {};
-        
-        item.actor.add(
-            new St.Label({text: '#' + issue.id + ' - ' + issue.subject}),
-            {x_fill: true, expand: true});
+        item.issueLabel = new St.Label({text: '#' + issue.id + ' - ' + issue.subject});
+        if(issue.unread_fields.length > 0)
+            item.issueLabel.add_style_class_name('ri-issue-label-unread');
+        item.actor.add(item.issueLabel,{x_fill: true, expand: true});
 
         item.statusLabelsBox = new St.BoxLayout({style_class: 'ri-popup-menu-item-status-labels'});
         item.actor.add(item.statusLabelsBox);
@@ -260,16 +263,35 @@ const RedmineIssues = new Lang.Class({
             this._issueItems[groupId] = {};
             this.menu.addMenuItem(issueItem, 0);
         }
-        global.log('[RI] add issue groupId=' + groupId + ' issue.id=' + issue.id);
         this._issueItems[groupId][issue.id] = item;
         issueItem.menu.addMenuItem(item);
+        this._refreshGroupStyleClass(groupId);
+    },
+
+    _refreshGroupStyleClass : function(groupId){
+        let unread = false;
+        for(let issueId in this._issueItems[groupId]){
+            if(this._issuesStorage.issues[issueId].unread_fields.length > 0){
+                unread=true;
+                break;
+            }
+        }
+        if(unread)
+            this._issueGroupItems[groupId].actor.add_style_class_name('ri-group-label-unread');
+        else
+            this._issueGroupItems[groupId].actor.remove_style_class_name('ri-group-label-unread');
     },
 
     _issueItemAtivated : function(item) {
         let url = this._settings.get_string('redmine-url') + 'issues/' + item.issueId;
         Util.spawn(['xdg-open', url]);
-        this._issuesStorage.updateIssueToUnread[item.issueId];
+        this._issuesStorage.updateIssueToUnread(item.issueId);
         this._makeLabelsRead(item);
+        item.issueLabel.remove_style_class_name('ri-issue-label-unread');
+        let issue = this._issuesStorage.issues[item.issueId];
+        let groupByKey = this._settings.get_string('group-by');
+        let groupId = issue[groupByKey] ? issue[groupByKey].id : -1;
+        this._refreshGroupStyleClass(groupId);
     },
 
     _convertIssueFromResponse : function(srcIssue){
@@ -281,16 +303,6 @@ const RedmineIssues = new Lang.Class({
                 issue[jsonKey]=value;
         });
         return issue;
-    },
-
-    _makeIssueUnread : function(issue){
-        issue.unread_fields = ['subject'];
-        IssueStorage.LABEL_KEYS.forEach(function(key){
-            let jsonKey = key.replace('-','_');
-            let value = issue[jsonKey];
-            if(value || value==0)
-                issue.unread_fields.push(jsonKey);
-        });
     },
 
     _loadIssue : function(id, callback){

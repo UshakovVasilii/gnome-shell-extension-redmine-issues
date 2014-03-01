@@ -88,7 +88,7 @@ const RedmineIssues = new Lang.Class({
             style_class: 'ri-command-popup'});
 
         let addIssueButton = new St.Button({
-                    child: new St.Icon({icon_name: 'list-add-symbolic'}),
+            child: new St.Icon({icon_name: 'list-add-symbolic'}),
             style_class: 'system-menu-action'
         });
         addIssueButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
@@ -98,7 +98,7 @@ const RedmineIssues = new Lang.Class({
                     child: new St.Icon({icon_name: 'view-refresh-symbolic'}),
             style_class: 'system-menu-action'
         });
-        refreshButton.connect('clicked', Lang.bind(this, this._refreshClicked));
+        refreshButton.connect('clicked', Lang.bind(this, this._refresh));
         commandMenuItem.actor.add(refreshButton, { expand: true, x_fill: false });
 
         this.menu.addMenuItem(commandMenuItem);
@@ -125,16 +125,19 @@ const RedmineIssues = new Lang.Class({
         }
     },
 
-    _refreshClicked : function() {
+    _refresh : function() {
         let groupByKey = this._settings.get_string('group-by');
         for(let i in this._issuesStorage.issues){
             let oldIssue = this._issuesStorage.issues[i];
             this._loadIssue(oldIssue.id, Lang.bind(this, function(newIssue) {
+                if(!this._makeUnreadChangedFields(oldIssue, newIssue))
+                    return;
+
+                this._issuesStorage.updateIssue(newIssue);
+
                 let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
                 let item = this._issueItems[groupId][newIssue.id];
 
-                if(!this._makeUnreadChangedFields(oldIssue, newIssue))
-                    return;
                 let groupChanged = false;
                 LABEL_KEYS.forEach(Lang.bind(this, function(key){
                     let jsonKey = key.replace('-','_');
@@ -150,10 +153,7 @@ const RedmineIssues = new Lang.Class({
 
                 if(groupChanged){
                     this._removeIssueMenuItem(oldIssue);
-                    this._issuesStorage.updateIssue(newIssue);
                     this._addIssueMenuItem(newIssue);
-                } else {
-                    this._issuesStorage.updateIssue(newIssue);
                 }
             }));
         }
@@ -188,7 +188,7 @@ const RedmineIssues = new Lang.Class({
         }));
         this.menu.close();
         addIssueDialog.open();
-        },
+    },
 
     _removeIssueClicked : function(issue){
         let confirmDialog = new ConfirmDialog.ConfirmDialog(
@@ -260,14 +260,7 @@ const RedmineIssues = new Lang.Class({
         }));
         item.actor.add(removeIssueButton);
 
-        item.connect('activate', Lang.bind(this, function() {
-            let url = this._settings.get_string('redmine-url') + 'issues/' + issue.id;
-            Util.spawn(['xdg-open', url]);
-            let readIssue = this._issuesStorage.issues[issue.id];
-            readIssue.unread_fields = [];
-            this._issuesStorage.updateIssue(readIssue);
-            this._makeLabelsRead(item);
-        }));
+        item.connect('activate', Lang.bind(this, this._issueItemAtivated));
 
         let groupByKey = this._settings.get_string('group-by');
         
@@ -281,6 +274,15 @@ const RedmineIssues = new Lang.Class({
         }
         this._issueItems[groupId][issue.id] = item;
         issueItem.menu.addMenuItem(item);
+    },
+
+    _issueItemAtivated : function(item) {
+        let url = this._settings.get_string('redmine-url') + 'issues/' + item.issueId;
+        Util.spawn(['xdg-open', url]);
+        let readIssue = this._issuesStorage.issues[item.issueId];
+        readIssue.unread_fields = [];
+        this._issuesStorage.updateIssue(readIssue);
+        this._makeLabelsRead(item);
     },
 
     _convertIssueFromResponse : function(srcIssue){

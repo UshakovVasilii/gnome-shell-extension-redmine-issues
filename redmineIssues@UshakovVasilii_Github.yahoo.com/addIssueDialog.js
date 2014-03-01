@@ -39,9 +39,9 @@ const AddIssueDialog = new Lang.Class({
         this.setInitialKeyFocus(this._entryText);
 
         this.setButtons([
-		{label : _('Cancel'),action: Lang.bind(this, this._onCancelButton), key: Clutter.Escape },
-		{label : _('Ok'),action: Lang.bind(this, this._onOkButton)}
-	]);
+            {label : _('Cancel'),action: Lang.bind(this, this._onCancelButton), key: Clutter.Escape },
+            {label : _('Ok'),action: Lang.bind(this, this._onOkButton)}
+        ]);
 
         this._entryText.connect('key-press-event', Lang.bind(this, function(o, e) {
             let symbol = e.get_key_symbol();
@@ -60,9 +60,9 @@ const AddIssueDialog = new Lang.Class({
     },
 
     _onOkButton: function() {
-	let text = this._entryText.get_text();
-	if(text)
-		text = text.replace(/[^0-9]/g, '');
+        let text = this._entryText.get_text();
+        if(text)
+            text = text.replace(/[^0-9]/g, '');
         this.callback(text);
         this.close();
     }

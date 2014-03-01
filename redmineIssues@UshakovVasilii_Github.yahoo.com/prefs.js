@@ -2,6 +2,7 @@ const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
 const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
+const Lang = imports.lang;
 
 const Gettext = imports.gettext.domain('redmine-issues');
 const _ = Gettext.gettext;
@@ -72,13 +73,12 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
 
 		group.set_active(groupItems.indexOf(this._settings.get_string('group-by')));
 		
-		let settings = this._settings;
-		group.connect('changed', function(entry) {
+		group.connect('changed', Lang.bind(this, function(entry) {
 			let [success, iter] = group.get_active_iter();
 			if (!success)
 				return;
-			settings.set_string('group-by', groupModel.get_value(iter, 0))
-		});
+			this._settings.set_string('group-by', groupModel.get_value(iter, 0))
+		}));
 
 		displayTab.attach(new Gtk.Label({ label: _('Group By')}), 0, i, 1, 1);
 		displayTab.attach(group, 1, i++, 1, 1);

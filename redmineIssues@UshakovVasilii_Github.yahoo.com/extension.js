@@ -34,16 +34,12 @@ const LABEL_KEYS = [
 
 let redmineIssues = null;
 
-function RedmineIssues() {
-	this._init();
-}
-
-RedmineIssues.prototype = {
-	__proto__: PanelMenu.Button.prototype,
+const RedmineIssues = new Lang.Class({
+	Name: 'RedmineIssuesMenuItem',
+	Extends: PanelMenu.Button,
 
 	_init: function() {
-		PanelMenu.Button.prototype._init.call(this, St.Align.START);
-		let _this=this;
+		this.parent(St.Align.START);
 
 		this._settings = Convenience.getSettings();
 		
@@ -62,9 +58,9 @@ RedmineIssues.prototype = {
 		this._addCommandMenuItem();
 
 		this._settingChangedSignals = [];
-		LABEL_KEYS.forEach(function(key){
-			_this._settingChangedSignals.push(_this._settings.connect('changed::show-status-item-' + key, Lang.bind(_this, _this._reloadStatusLabels)));
-		});
+		LABEL_KEYS.forEach(Lang.bind(this, function(key){
+			this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-' + key, Lang.bind(this, this._reloadStatusLabels)));
+		}));
 		this._settingChangedSignals.push(this._settings.connect('changed::group-by', Lang.bind(this, this._groupByChanged)));
 	},
 
@@ -130,29 +126,28 @@ RedmineIssues.prototype = {
 	},
 
 	_refreshClicked : function() {
-		let _this = this;
-		let groupByKey = _this._settings.get_string('group-by');
+		let groupByKey = this._settings.get_string('group-by');
 		for(let i in this._issuesStorage.issues){
 			let oldIssue = this._issuesStorage.issues[i];
-			this._loadIssue(oldIssue.id, function(newIssue) {
+			this._loadIssue(oldIssue.id, Lang.bind(this, function(newIssue) {
 				let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
-				let item = _this._issueItems[groupId][newIssue.id];
+				let item = this._issueItems[groupId][newIssue.id];
 				// TODO
 
-				LABEL_KEYS.forEach(function(key){
+				LABEL_KEYS.forEach(Lang.bind(this, function(key){
 					if(key == 'done-ratio' && (oldIssue.done_ratio || oldIssue.done_ratio==0) && oldIssue.done_ratio != newIssue.done_ratio){
-						_this._makeLabelNew({item : item, key : 'done-ratio', value : newIssue.done_ratio + '%'});
+						this._makeLabelNew({item : item, key : 'done-ratio', value : newIssue.done_ratio + '%'});
 					} else {
 						let jsonKey = key.replace('-','_');
 						if(oldIssue[jsonKey] && oldIssue[jsonKey].id != newIssue[jsonKey].id)
-							_this._makeLabelNew({item : item, key : key, value : newIssue[jsonKey].name});
+							this._makeLabelNew({item : item, key : key, value : newIssue[jsonKey].name});
 					}
-				});
+				}));
 
 
 				//_this._removeIssueMenuItem(oldIssue);
 				//_this._addIssueMenuItem(newIssue);
-			});
+			}));
 		}
 	},
 
@@ -172,27 +167,25 @@ RedmineIssues.prototype = {
 	},
 
 	_addIssueClicked : function() {
-		let _this = this;
-		let addIssueDialog = new AddIssueDialog.AddIssueDialog(function(issueId){
-			_this._loadIssue(issueId, function(issue) {
-				if(_this._issuesStorage.addIssue(issue)) {
-					_this._addIssueMenuItem(issue);
+		let addIssueDialog = new AddIssueDialog.AddIssueDialog(Lang.bind(this, function(issueId){
+			this._loadIssue(issueId, Lang.bind(this, function(issue) {
+				if(this._issuesStorage.addIssue(issue)) {
+					this._addIssueMenuItem(issue);
 				}
-			});
-		});
+			}));
+		}));
 		this.menu.close();
 		addIssueDialog.open();
         },
 
 	_removeIssueClicked : function(issue){
-		let _this = this;
 		let confirmDialog = new ConfirmDialog.ConfirmDialog(
 			_('Confirm #%s removal').format(issue.id),
 			_('Select OK to delete \n"%s"\n or cancel to abort').format(issue.subject),
-			function() {
-				_this._issuesStorage.removeIssue(issue.id);
-				_this._removeIssueMenuItem(issue);
-			}
+			Lang.bind(this, function() {
+				this._issuesStorage.removeIssue(issue.id);
+				this._removeIssueMenuItem(issue);
+			})
 		);
 		this.menu.close();
         	confirmDialog.open();
@@ -221,21 +214,19 @@ RedmineIssues.prototype = {
 
 	_addStatusLabels : function(item){
 		let issue = this._issuesStorage.issues[item.issueId];
-		let _this = this;
 
-		LABEL_KEYS.forEach(function(key){
+		LABEL_KEYS.forEach(Lang.bind(this, function(key){
 			if(key == 'done-ratio' && (issue.done_ratio || issue.done_ratio==0)) {
-				_this._addStatusLabel({item : item, key : 'done-ratio', value : issue.done_ratio + '%'});
+				this._addStatusLabel({item : item, key : 'done-ratio', value : issue.done_ratio + '%'});
 			} else {
 				let jsonKey = key.replace('-','_');
 				if(issue[jsonKey])
-					_this._addStatusLabel({item : item, key : key, value : issue[jsonKey].name});
+					this._addStatusLabel({item : item, key : key, value : issue[jsonKey].name});
 			}
-		});
+		}));
 	},
 
 	_addIssueMenuItem : function(issue){
-		let _this = this;
 		let item = new PopupMenu.PopupBaseMenuItem();
 		item.issueId = issue.id;
 
@@ -252,16 +243,16 @@ RedmineIssues.prototype = {
 		let removeIssueButton = new St.Button({
             		child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
 		});
-		removeIssueButton.connect('clicked', function(){
-			_this._removeIssueClicked(issue);
-		});
+		removeIssueButton.connect('clicked', Lang.bind(this, function(){
+			this._removeIssueClicked(issue);
+		}));
 		item.actor.add(removeIssueButton);
 
-		item.connect('activate', function() {
-			let url = _this._settings.get_string('redmine-url') + 'issues/' + issue.id;
+		item.connect('activate', Lang.bind(this, function() {
+			let url = this._settings.get_string('redmine-url') + 'issues/' + issue.id;
 			Util.spawn(['xdg-open', url]);
-			_this._makeLabelsRead(item);
-		});
+			this._makeLabelsRead(item);
+		}));
 
 		let groupByKey = this._settings.get_string('group-by');
 		
@@ -298,7 +289,7 @@ RedmineIssues.prototype = {
 			}
 		});
 	}
-};
+});
 
 function init() {
 	Convenience.initTranslations();

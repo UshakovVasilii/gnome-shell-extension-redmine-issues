@@ -21,17 +21,6 @@ const AddIssueDialog = Me.imports.addIssueDialog;
 const ConfirmDialog = Me.imports.confirmDialog;
 const IssueStorage = Me.imports.issueStorage;
 
-const LABEL_KEYS = [
-    'status',
-    'assigned-to',
-    'tracker',
-    'priority',
-    'done-ratio',
-    'author',
-    'project',
-    'fixed-version',
-    'category'];
-
 let redmineIssues = null;
 
 const RedmineIssues = new Lang.Class({
@@ -58,7 +47,7 @@ const RedmineIssues = new Lang.Class({
         this._addCommandMenuItem();
 
         this._settingChangedSignals = [];
-        LABEL_KEYS.forEach(Lang.bind(this, function(key){
+        IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
             this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-' + key, Lang.bind(this, this._reloadStatusLabels)));
         }));
         this._settingChangedSignals.push(this._settings.connect('changed::group-by', Lang.bind(this, this._groupByChanged)));
@@ -129,17 +118,16 @@ const RedmineIssues = new Lang.Class({
         let groupByKey = this._settings.get_string('group-by');
         for(let i in this._issuesStorage.issues){
             let oldIssue = this._issuesStorage.issues[i];
-            this._loadIssue(oldIssue.id, Lang.bind(this, function(newIssue) {
-                if(!this._makeUnreadChangedFields(oldIssue, newIssue))
+            this._loadIssue(i, Lang.bind(this, function(newIssue) {    
+                if(!this._issuesStorage.updateIssueUnreadFields(newIssue))
                     return;
-
-                this._issuesStorage.updateIssue(newIssue);
 
                 let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
                 let item = this._issueItems[groupId][newIssue.id];
+		global.log('[RI] item = ' + item + ' groupId='+ groupId + ' newIssue.id=' + newIssue.id);
 
                 let groupChanged = false;
-                LABEL_KEYS.forEach(Lang.bind(this, function(key){
+                IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
                     let jsonKey = key.replace('-','_');
                     if(newIssue.unread_fields.indexOf(jsonKey) >= 0){
                         if(this._settings.get_boolean('show-status-item-' + key))
@@ -170,7 +158,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _makeLabelsRead : function(item){
-        LABEL_KEYS.forEach(function(key){
+        IssueStorage.LABEL_KEYS.forEach(function(key){
             let label = item.statusLabels[key];
             if(label)
                 label.style_class = 'popup-status-menu-item';
@@ -225,7 +213,7 @@ const RedmineIssues = new Lang.Class({
     _addStatusLabels : function(item){
         let issue = this._issuesStorage.issues[item.issueId];
 
-        LABEL_KEYS.forEach(Lang.bind(this, function(key){
+        IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
             if(!this._settings.get_boolean('show-status-item-' + key))
                 return;
             let jsonKey = key.replace('-','_');
@@ -272,6 +260,7 @@ const RedmineIssues = new Lang.Class({
             this._issueItems[groupId] = {};
             this.menu.addMenuItem(issueItem, 0);
         }
+        global.log('[RI] add issue groupId=' + groupId + ' issue.id=' + issue.id);
         this._issueItems[groupId][issue.id] = item;
         issueItem.menu.addMenuItem(item);
     },
@@ -279,15 +268,13 @@ const RedmineIssues = new Lang.Class({
     _issueItemAtivated : function(item) {
         let url = this._settings.get_string('redmine-url') + 'issues/' + item.issueId;
         Util.spawn(['xdg-open', url]);
-        let readIssue = this._issuesStorage.issues[item.issueId];
-        readIssue.unread_fields = [];
-        this._issuesStorage.updateIssue(readIssue);
+        this._issuesStorage.updateIssueToUnread[item.issueId];
         this._makeLabelsRead(item);
     },
 
     _convertIssueFromResponse : function(srcIssue){
         let issue = {id:srcIssue.id, subject : srcIssue.subject, updated_on : srcIssue.updated_on};
-        LABEL_KEYS.forEach(function(key){
+        IssueStorage.LABEL_KEYS.forEach(function(key){
             let jsonKey = key.replace('-','_');
             let value = srcIssue[jsonKey];
             if(value || value==0)
@@ -298,34 +285,12 @@ const RedmineIssues = new Lang.Class({
 
     _makeIssueUnread : function(issue){
         issue.unread_fields = ['subject'];
-        LABEL_KEYS.forEach(function(key){
+        IssueStorage.LABEL_KEYS.forEach(function(key){
             let jsonKey = key.replace('-','_');
             let value = issue[jsonKey];
             if(value || value==0)
                 issue.unread_fields.push(jsonKey);
         });
-    },
-
-    _makeUnreadChangedFields : function(oldIssue, newIssue){
-        newIssue.unread_fields = oldIssue.unread_fields;
-        if(!newIssue.unread_fields)
-            newIssue.unread_fields = [];
-        LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            let jsonKey = key.replace('-','_');
-            if(key == 'done-ratio' && (newIssue.done_ratio || newIssue.done_ratio==0) && oldIssue.done_ratio != newIssue.done_ratio){
-                if(newIssue.unread_fields.indexOf(jsonKey) < 0)
-                    newIssue.unread_fields.push(jsonKey);
-            } else if(newIssue[jsonKey] && (!oldIssue[jsonKey] || oldIssue[jsonKey].id != newIssue[jsonKey].id)) {
-                if(newIssue.unread_fields.indexOf(jsonKey) < 0)
-                    newIssue.unread_fields.push(jsonKey);
-            }
-        }));
-
-        if(oldIssue.subject != newIssue.subject && newIssue.unread_fields.indexOf('subject') < 0)
-            newIssue.unread_fields.push('subject');
-        if(oldIssue.updated_on != newIssue.updated_on && newIssue.unread_fields.indexOf('updated_on') < 0)
-            newIssue.unread_fields.push('updated_on');
-        return oldIssue.updated_on != newIssue.updated_on;
     },
 
     _loadIssue : function(id, callback){

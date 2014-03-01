@@ -4,6 +4,17 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
+const LABEL_KEYS = [
+    'status',
+    'assigned-to',
+    'tracker',
+    'priority',
+    'done-ratio',
+    'author',
+    'project',
+    'fixed-version',
+    'category'];
+
 const IssueStorage = new Lang.Class({
     Name: 'IssueStorage',
 
@@ -31,6 +42,12 @@ const IssueStorage = new Lang.Class({
         return true;
     },
 
+    updateIssueToUnread : function(issueId){
+        let issue = this.issues[issueId];
+        issue.unread_fields = [];
+        this.updateIssue(issue);
+    },
+
     addIssue : function(issue){
         if(this.issues[issue.id])
             return false;
@@ -49,6 +66,34 @@ const IssueStorage = new Lang.Class({
         }
         this._settings.set_strv('issues', data);
         return true;
+    },
+
+    updateIssueUnreadFields : function(newIssue){
+        let oldIssue = this.issues[newIssue.id];
+        if(oldIssue.updated_on == newIssue.updated_on)
+            return false;
+
+        newIssue.unread_fields = oldIssue.unread_fields;
+        if(!newIssue.unread_fields)
+            newIssue.unread_fields = [];
+        LABEL_KEYS.forEach(Lang.bind(this, function(key){
+            let jsonKey = key.replace('-','_');
+            if(key == 'done-ratio' && (newIssue.done_ratio || newIssue.done_ratio==0) && oldIssue.done_ratio != newIssue.done_ratio){
+                if(newIssue.unread_fields.indexOf(jsonKey) < 0)
+                    newIssue.unread_fields.push(jsonKey);
+            } else if(newIssue[jsonKey] && (!oldIssue[jsonKey] || oldIssue[jsonKey].id != newIssue[jsonKey].id)) {
+                if(newIssue.unread_fields.indexOf(jsonKey) < 0)
+                    newIssue.unread_fields.push(jsonKey);
+            }
+        }));
+
+        if(oldIssue.subject != newIssue.subject && newIssue.unread_fields.indexOf('subject') < 0)
+            newIssue.unread_fields.push('subject');
+        if(oldIssue.updated_on != newIssue.updated_on && newIssue.unread_fields.indexOf('updated_on') < 0)
+            newIssue.unread_fields.push('updated_on');
+
+	this.updateIssue(newIssue);
+	return true;
     }
 
 });

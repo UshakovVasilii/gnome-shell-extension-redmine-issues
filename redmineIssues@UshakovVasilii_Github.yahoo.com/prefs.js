@@ -28,17 +28,17 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         let generalTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
         this.append_page(generalTab,  new Gtk.Label({label: _('General')}));
         
-        generalTab.attach(new Gtk.Label({ label: _('Redmine URL')}), 0, 0, 1, 1);
+        generalTab.attach(new Gtk.Label({ label: _('Redmine URL'), halign : Gtk.Align.END}), 0, 0, 1, 1);
         let redmineURL = new Gtk.Entry({ hexpand: true });
         generalTab.attach(redmineURL, 1, 0, 1, 1);
         this._settings.bind('redmine-url', redmineURL, 'text', Gio.SettingsBindFlags.DEFAULT);
 
-        generalTab.attach(new Gtk.Label({ label: _('API access key')}), 0, 1, 1, 1);
+        generalTab.attach(new Gtk.Label({ label: _('API access key'), halign : Gtk.Align.END}), 0, 1, 1, 1);
         let apiAccessKey = new Gtk.Entry({ hexpand: true });
         generalTab.attach(apiAccessKey, 1, 1, 1, 1);
         this._settings.bind('api-access-key', apiAccessKey, 'text', Gio.SettingsBindFlags.DEFAULT);
 
-        generalTab.attach(new Gtk.Label({ label: _('Auto refresh')}), 0, 2, 1, 1);
+        generalTab.attach(new Gtk.Label({ label: _('Auto refresh (min)'), halign : Gtk.Align.END}), 0, 2, 1, 1);
         let autoRefresh = Gtk.SpinButton.new_with_range (0, 60, 1);
         generalTab.attach(autoRefresh, 1, 2, 1, 1);
         this._settings.bind('auto-refresh', autoRefresh, 'value', Gio.SettingsBindFlags.DEFAULT);
@@ -86,7 +86,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
             this._settings.set_string('group-by', groupModel.get_value(iter, 0))
         }));
 
-        displayTab.attach(new Gtk.Label({ label: _('Group By')}), 0, i, 1, 1);
+        displayTab.attach(new Gtk.Label({ label: _('Group By'), halign : Gtk.Align.END}), 0, i, 1, 1);
         displayTab.attach(group, 1, i++, 1, 1);
 
         // Switches
@@ -101,20 +101,20 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         this._addSwitch({tab : displayTab, key : 'show-status-item-fixed-version', label : _('Show Target Version'), y : i++, x : 2});
         this._addSwitch({tab : displayTab, key : 'show-status-item-category', label : _('Show Category'), y : i++, x : 2});
 
-        displayTab.attach(new Gtk.Label({ label: _('Maximum width of Subject (px)')}), 0, i, 3, 1);
+        displayTab.attach(new Gtk.Label({ label: _('Maximum width of Subject (px)'), halign : Gtk.Align.END}), 0, i, 3, 1);
         let maxSubjectWidth = Gtk.SpinButton.new_with_range (300, 1000, 10);
         displayTab.attach(maxSubjectWidth, 3, i++, 1, 1);
         this._settings.bind('max-subject-width', maxSubjectWidth, 'value', Gio.SettingsBindFlags.DEFAULT);
 
-        displayTab.attach(new Gtk.Label({ label: _('Minimum width of Menu Item (px)')}), 0, i, 3, 1);
+        displayTab.attach(new Gtk.Label({ label: _('Minimum width of Menu Item (px)'), halign : Gtk.Align.END}), 0, i, 3, 1);
         let minMenuItemWidth = Gtk.SpinButton.new_with_range (400, 1100, 10);
         displayTab.attach(minMenuItemWidth, 3, i++, 1, 1);
         this._settings.bind('min-menu-item-width', minMenuItemWidth, 'value', Gio.SettingsBindFlags.DEFAULT);
     },
 
     _addSwitch : function(params){
-        params.tab.attach(new Gtk.Label({ label: params.label}), params.x, params.y, 1, 1);
-        let sw = new Gtk.Switch();
+        params.tab.attach(new Gtk.Label({ label: params.label, halign : Gtk.Align.END}), params.x, params.y, 1, 1);
+        let sw = new Gtk.Switch({halign : Gtk.Align.END, valign : Gtk.Align.CENTER});
         params.tab.attach(sw, params.x + 1, params.y, 1, 1);
         this._settings.bind(params.key, sw, 'active', Gio.SettingsBindFlags.DEFAULT);
     }

@@ -51,6 +51,22 @@ const RedmineIssues = new Lang.Class({
             this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-' + key, Lang.bind(this, this._reloadStatusLabels)));
         }));
         this._settingChangedSignals.push(this._settings.connect('changed::group-by', Lang.bind(this, this._groupByChanged)));
+        this._settingChangedSignals.push(this._settings.connect('changed::max-subject-width', Lang.bind(this, this._maxSubjectWidthChanged)));
+        this._settingChangedSignals.push(this._settings.connect('changed::min-menu-item-width', Lang.bind(this, this._minMenuItemWidthChanged)));
+    },
+
+    _maxSubjectWidthChanged : function(){
+        let maxSubjectWidth = this._settings.get_int('max-subject-width');
+        for(let groupKey in this._issueItems){
+            for(let itemKey in this._issueItems[groupKey]){
+                let item = this._issueItems[groupKey][itemKey];
+                item.issueLabel.style = 'max-width:' + maxSubjectWidth + 'px';
+            }
+        }
+    },
+
+    _minMenuItemWidthChanged : function(){
+        this.commandMenuItem.actor.style = 'min-width:' + this._settings.get_int('min-menu-item-width') + 'px';
     },
 
     _addIssueMenuItems : function(){
@@ -71,26 +87,26 @@ const RedmineIssues = new Lang.Class({
     },
 
     _addCommandMenuItem : function(){
-        let commandMenuItem = new PopupMenu.PopupBaseMenuItem({
+        this.commandMenuItem = new PopupMenu.PopupBaseMenuItem({
             reactive: false,
             can_focus: false});
-        commandMenuItem.actor.style = 'min-width:' + this._settings.get_int('min-menu-item-widh') + 'px';
+        this.commandMenuItem.actor.style = 'min-width:' + this._settings.get_int('min-menu-item-width') + 'px';
 
         let addIssueButton = new St.Button({
             child: new St.Icon({icon_name: 'list-add-symbolic'}),
             style_class: 'system-menu-action'
         });
         addIssueButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
-        commandMenuItem.actor.add(addIssueButton, { expand: true, x_fill: false });
+        this.commandMenuItem.actor.add(addIssueButton, { expand: true, x_fill: false });
 
         let refreshButton = new St.Button({
                     child: new St.Icon({icon_name: 'view-refresh-symbolic'}),
             style_class: 'system-menu-action'
         });
         refreshButton.connect('clicked', Lang.bind(this, this._refresh));
-        commandMenuItem.actor.add(refreshButton, { expand: true, x_fill: false });
+        this.commandMenuItem.actor.add(refreshButton, { expand: true, x_fill: false });
 
-        this.menu.addMenuItem(commandMenuItem);
+        this.menu.addMenuItem(this.commandMenuItem);
     },
 
     disconnectSettingChangedSignals : function(){

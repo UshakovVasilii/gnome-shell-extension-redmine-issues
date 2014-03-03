@@ -61,7 +61,7 @@
 			<default>400</default>
 			<summary>Max Subject Width</summary>
 		</key>
-		<key name="min-menu-item-widh" type="i">
+		<key name="min-menu-item-width" type="i">
 			<default>600</default>
 			<summary>Min Menu Item Width</summary>
 		</key>

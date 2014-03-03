@@ -101,7 +101,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         this._addSwitch({tab : displayTab, key : 'show-status-item-fixed-version', label : _('Show Target Version'), y : i++, x : 2});
         this._addSwitch({tab : displayTab, key : 'show-status-item-category', label : _('Show Category'), y : i++, x : 2});
 
-        displayTab.attach(new Gtk.Label({ label: _('Max Subject width (px)')}), 0, i, 3, 1);
+        displayTab.attach(new Gtk.Label({ label: _('Maximum width of Subject (px)')}), 0, i, 3, 1);
         let maxSubjectWidth = Gtk.SpinButton.new_with_range (300, 1000, 10);
         displayTab.attach(maxSubjectWidth, 3, i++, 1, 1);
         this._settings.bind('max-subject-width', maxSubjectWidth, 'value', Gio.SettingsBindFlags.DEFAULT);
@@ -109,7 +109,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         displayTab.attach(new Gtk.Label({ label: _('Minimum width of Menu Item (px)')}), 0, i, 3, 1);
         let minMenuItemWidth = Gtk.SpinButton.new_with_range (400, 1100, 10);
         displayTab.attach(minMenuItemWidth, 3, i++, 1, 1);
-        this._settings.bind('min-menu-item-widh', minMenuItemWidth, 'value', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('min-menu-item-width', minMenuItemWidth, 'value', Gio.SettingsBindFlags.DEFAULT);
     },
 
     _addSwitch : function(params){

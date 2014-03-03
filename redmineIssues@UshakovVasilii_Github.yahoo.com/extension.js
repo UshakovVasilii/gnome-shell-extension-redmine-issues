@@ -1,4 +1,4 @@
-
+const Mainloop = imports.mainloop;
 const St = imports.gi.St;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
@@ -53,6 +53,32 @@ const RedmineIssues = new Lang.Class({
         this._settingChangedSignals.push(this._settings.connect('changed::group-by', Lang.bind(this, this._groupByChanged)));
         this._settingChangedSignals.push(this._settings.connect('changed::max-subject-width', Lang.bind(this, this._maxSubjectWidthChanged)));
         this._settingChangedSignals.push(this._settings.connect('changed::min-menu-item-width', Lang.bind(this, this._minMenuItemWidthChanged)));
+        this._settingChangedSignals.push(this._settings.connect('changed::auto-refresh', Lang.bind(this, this._autoRefreshChanged)));
+
+        this._startTimer();
+    },
+
+    _autoRefreshChanged : function(){
+        if(this._timeoutId) {
+            // global.log('[RI] remove timeout');
+            Mainloop.source_remove(this._timeoutId);
+            this._timeoutId = null;
+        }
+        let timeout = this._settings.get_int('auto-refresh');
+        if(timeout > 0){
+            // global.log('[RI] add timeout');
+            this._timeoutId = Mainloop.timeout_add_seconds(timeout * 60, Lang.bind(this, this._startTimer));
+        }
+    },
+
+    _startTimer : function(){
+        // global.log('[RI] start timer');
+        let timeout = this._settings.get_int('auto-refresh');
+        if(timeout > 0) {
+            this._refresh();
+            this._timeoutId = Mainloop.timeout_add_seconds(timeout * 60, Lang.bind(this, this._startTimer));
+        }
+        // global.log('[RI] refresh by timer finish');
     },
 
     _maxSubjectWidthChanged : function(){
@@ -109,11 +135,12 @@ const RedmineIssues = new Lang.Class({
         this.menu.addMenuItem(this.commandMenuItem);
     },
 
-    disconnectSettingChangedSignals : function(){
+    disconnectSignalsAndStopTimer : function(){
         let settings = this._settings;
         this._settingChangedSignals.forEach(function(signal){
             settings.disconnect(signal);
         });
+        Mainloop.source_remove(this._timeoutId);
     },
 
     _reloadStatusLabels : function(){
@@ -347,7 +374,7 @@ function enable() {
 };
 
 function disable() {
-    redmineIssues.disconnectSettingChangedSignals();
+    redmineIssues.disconnectSignalsAndStopTimer();
     redmineIssues.destroy();
     redmineIssues=null;
 };

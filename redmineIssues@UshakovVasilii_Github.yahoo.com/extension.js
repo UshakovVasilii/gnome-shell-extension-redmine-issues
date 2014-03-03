@@ -11,7 +11,7 @@ const Gio = imports.gi.Gio;
 const session = new Soup.SessionAsync();
 Soup.Session.prototype.add_feature.call(session, new Soup.ProxyResolverDefault());
 
-const Gettext = imports.gettext.domain('redmine-issue-list');
+const Gettext = imports.gettext.domain('redmine-issues');
 const _ = Gettext.gettext;
 
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -73,8 +73,8 @@ const RedmineIssues = new Lang.Class({
     _addCommandMenuItem : function(){
         let commandMenuItem = new PopupMenu.PopupBaseMenuItem({
             reactive: false,
-            can_focus: false,
-            style_class: 'ri-command-popup'});
+            can_focus: false});
+        commandMenuItem.actor.style = 'min-width:' + this._settings.get_int('min-menu-item-widh') + 'px';
 
         let addIssueButton = new St.Button({
             child: new St.Icon({icon_name: 'list-add-symbolic'}),
@@ -234,7 +234,8 @@ const RedmineIssues = new Lang.Class({
         item.issueId = issue.id;
 
         item.statusLabels = {};
-        item.issueLabel = new St.Label({text: '#' + issue.id + ' - ' + issue.subject});
+        item.issueLabel = new St.Label({text: '#' + issue.id + ' - ' + issue.subject, style_class: 'ri-subject-label'});
+        item.issueLabel.style = 'max-width:' + this._settings.get_int('max-subject-width') + 'px';
         if(issue.unread_fields.length > 0)
             item.issueLabel.add_style_class_name('ri-issue-label-unread');
         item.actor.add(item.issueLabel,{x_fill: true, expand: true});

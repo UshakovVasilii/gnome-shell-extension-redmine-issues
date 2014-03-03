@@ -1,2 +1,2 @@
-gnome-shell-extension-redmine-Issues
+gnome-shell-extension-redmine-issues
 ====================================

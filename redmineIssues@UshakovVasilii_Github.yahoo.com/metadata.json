@@ -1,8 +1,9 @@
 {
-	"shell-version": ["3.10"],
-	"uuid": "redmineIssues@UshakovVasilii_Github.yahoo.com",
-	"name": "Redmine Issues",
-	"description": "Monitoring Redmine issues by REST API",
-	"settings-schema": "org.gnome.shell.extensions.redmine-issues",
-	"gettext-domain": "redmine-issues"
+    "shell-version": ["3.10"],
+    "uuid": "redmineIssues@UshakovVasilii_Github.yahoo.com",
+    "name": "Redmine Issues",
+    "description": "Monitoring Redmine issues by REST API",
+    "settings-schema": "org.gnome.shell.extensions.redmine-issues",
+    "gettext-domain": "redmine-issues",
+    "url": "https://github.com/UshakovVasilii/gnome-shell-extension-redmine-issues"
 }

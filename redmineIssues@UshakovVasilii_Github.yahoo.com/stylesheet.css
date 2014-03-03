@@ -1,7 +1,3 @@
-.ri-command-popup {
-  min-width:600px;
-}
-
 .ri-popup-status-menu-item-new {
   font-style: oblique;
 }
@@ -18,4 +14,8 @@
 .ri-group-label-unread {
   font-style: oblique;
   font-weight: bold;
+}
+
+.ri-subject-label {
+  text-overflow: ellipsis;
 }

@@ -25,6 +25,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
 
         this._settings = Convenience.getSettings();
 
+        // General tab
         let generalTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
         this.append_page(generalTab,  new Gtk.Label({label: _('General')}));
         
@@ -43,7 +44,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         generalTab.attach(autoRefresh, 1, 2, 1, 1);
         this._settings.bind('auto-refresh', autoRefresh, 'value', Gio.SettingsBindFlags.DEFAULT);
         
-
+        // Display tab
         let displayTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
         this.append_page(displayTab,  new Gtk.Label({label: _('Display')}));
         let i = 0;
@@ -110,6 +111,19 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         let minMenuItemWidth = Gtk.SpinButton.new_with_range (400, 1100, 10);
         displayTab.attach(minMenuItemWidth, 3, i++, 1, 1);
         this._settings.bind('min-menu-item-width', minMenuItemWidth, 'value', Gio.SettingsBindFlags.DEFAULT);
+
+        // Filters tab
+        let filtersTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
+        this.append_page(filtersTab,  new Gtk.Label({label: _('Filters')}));
+        
+        let filterHelp = _('Examples:') + '\n<i>status_id=1&amp;project_id=my-project</i>\n' +
+            '<i>assigned_to_id=me&amp;status_id=open</i>\n' +
+            _('More information:') + ' <a href="http://www.redmine.org/projects/redmine/wiki/Rest_Issues">Rest Issue</a>'
+        filtersTab.attach(new Gtk.Label({label : filterHelp, use_markup : true, halign : Gtk.Align.START}), 0, 0, 1, 1);
+        let filters = new Gtk.TextView();
+        let filtersScroll = new Gtk.ScrolledWindow({expand : true, shadow_type: Gtk.ShadowType.ETCHED_IN});
+        filtersScroll.add_with_viewport(filters);
+        filtersTab.attach(filtersScroll, 0, 1, 1, 1);
     },
 
     _addSwitch : function(params){

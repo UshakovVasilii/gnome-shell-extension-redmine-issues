@@ -168,6 +168,7 @@ const RedmineIssues = new Lang.Class({
                 let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
                 let item = this._issueItems[groupId][newIssue.id];
                 item.issueLabel.add_style_class_name('ri-issue-label-unread');
+                this._addMarkReadButton(item);
 
                 let groupChanged = false;
                 IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
@@ -279,7 +280,8 @@ const RedmineIssues = new Lang.Class({
         item.statusLabels = {};
         item.issueLabel = new St.Label({text: '#' + issue.id + ' - ' + issue.subject, style_class: 'ri-subject-label'});
         item.issueLabel.style = 'max-width:' + this._settings.get_int('max-subject-width') + 'px';
-        if(issue.unread_fields.length > 0)
+        let unread = issue.unread_fields.length > 0;
+        if(unread)
             item.issueLabel.add_style_class_name('ri-issue-label-unread');
         item.actor.add(item.issueLabel,{x_fill: true, expand: true});
 
@@ -287,13 +289,19 @@ const RedmineIssues = new Lang.Class({
         item.actor.add(item.statusLabelsBox);
         this._addStatusLabels(item);
 
+        item.buttonBox = new St.BoxLayout();
+        item.actor.add(item.buttonBox);
+
+        if(unread)
+          this._addMarkReadButton(item);
+
         let removeIssueButton = new St.Button({
-                    child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
+            child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
         });
         removeIssueButton.connect('clicked', Lang.bind(this, function(){
             this._removeIssueClicked(issue);
         }));
-        item.actor.add(removeIssueButton);
+        item.buttonBox.add(removeIssueButton);
 
         item.connect('activate', Lang.bind(this, this._issueItemAtivated));
 
@@ -312,6 +320,17 @@ const RedmineIssues = new Lang.Class({
         this._refreshGroupStyleClass(groupId);
     },
 
+    _addMarkReadButton : function(item){
+        item.buttonBox.markReadButton = new St.Button({
+            child: new St.Icon({icon_name: 'object-select-symbolic', style_class: 'system-status-icon'})
+        });
+        item.buttonBox.markReadButton.connect('clicked', Lang.bind(this, function(){
+            this._issuesStorage.updateIssueToRead(item.issueId);
+            this._makeMenuItemRead(item);
+        }));
+        item.buttonBox.insert_child_at_index(item.buttonBox.markReadButton, 0);
+    },
+
     _refreshGroupStyleClass : function(groupId){
         let unread = false;
         for(let issueId in this._issueItems[groupId]){
@@ -326,16 +345,21 @@ const RedmineIssues = new Lang.Class({
             this._issueGroupItems[groupId].actor.remove_style_class_name('ri-group-label-unread');
     },
 
-    _issueItemAtivated : function(item) {
-        let url = this._settings.get_string('redmine-url') + 'issues/' + item.issueId;
-        Util.spawn(['xdg-open', url]);
-        this._issuesStorage.updateIssueToUnread(item.issueId);
+    _makeMenuItemRead : function(item){
         this._makeLabelsRead(item);
         item.issueLabel.remove_style_class_name('ri-issue-label-unread');
+        item.buttonBox.markReadButton.destroy();
         let issue = this._issuesStorage.issues[item.issueId];
         let groupByKey = this._settings.get_string('group-by');
         let groupId = issue[groupByKey] ? issue[groupByKey].id : -1;
         this._refreshGroupStyleClass(groupId);
+    },
+
+    _issueItemAtivated : function(item) {
+        let url = this._settings.get_string('redmine-url') + 'issues/' + item.issueId;
+        Util.spawn(['xdg-open', url]);
+        this._issuesStorage.updateIssueToRead(item.issueId);
+        this._makeMenuItemRead(item);
     },
 
     _convertIssueFromResponse : function(srcIssue){

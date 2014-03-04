@@ -121,12 +121,12 @@ const RedmineIssues = new Lang.Class({
         addIssueButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
         this.commandMenuItem.actor.add(addIssueButton, { expand: true, x_fill: false });
 
-        let refreshButton = new St.Button({
+        this.commandMenuItem.refreshButton = new St.Button({
                     child: new St.Icon({icon_name: 'view-refresh-symbolic'}),
             style_class: 'system-menu-action'
         });
-        refreshButton.connect('clicked', Lang.bind(this, this._refresh));
-        this.commandMenuItem.actor.add(refreshButton, { expand: true, x_fill: false });
+        this.commandMenuItem.refreshButton.connect('clicked', Lang.bind(this, this._refresh));
+        this.commandMenuItem.actor.add(this.commandMenuItem.refreshButton, { expand: true, x_fill: false });
 
         this.menu.addMenuItem(this.commandMenuItem);
     },
@@ -158,6 +158,7 @@ const RedmineIssues = new Lang.Class({
             return;
         }
         this._refreshing = true;
+        this.commandMenuItem.refreshButton.child.icon_name ='content-loading-symbolic';
         this._issuesForCheck = [];
         for(let i in this._issuesStorage.issues){
             this._issuesForCheck.push(parseInt(i, 10));
@@ -206,7 +207,7 @@ const RedmineIssues = new Lang.Class({
             }
   
             if(this._issuesForCheck.length == 0){
-                this._refreshing = false;
+                this._finishRefresh();
             } else if(this._filtersForCheck.length == 0){
                 for(let i in this._issuesForCheck){
                     this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._refreshIssueMenuItem));
@@ -235,11 +236,16 @@ const RedmineIssues = new Lang.Class({
                  if (index > -1) {
                      this._issuesForCheck.splice(index, 1);
                      if(this._refreshing && this._issuesForCheck.length == 0){
-                         this._refreshing = false;
+                         this._finishRefresh();
                      }
                  }
             }
         }));
+    },
+
+    _finishRefresh : function(){
+        this._refreshing = false;
+        this.commandMenuItem.refreshButton.child.icon_name ='view-refresh-symbolic';
     },
 
     _refreshIssueMenuItem : function(newIssue) {

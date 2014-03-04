@@ -374,7 +374,10 @@ const RedmineIssues = new Lang.Class({
     },
 
     _loadIssue : function(id, callback){
-        let request = Soup.Message.new('GET', this._settings.get_string('redmine-url') + 'issues/' + id + '.json');
+        let url = this._settings.get_string('redmine-url');
+        if(url && url.slice(-1) != '/')
+            url += '/';
+        let request = Soup.Message.new('GET', url + 'issues/' + id + '.json');
         request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
 
         session.queue_message(request, Lang.bind(this, function(session, response) {

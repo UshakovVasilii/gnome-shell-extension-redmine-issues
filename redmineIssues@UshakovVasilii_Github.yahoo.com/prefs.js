@@ -33,11 +33,13 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         let redmineURL = new Gtk.Entry({ hexpand: true });
         generalTab.attach(redmineURL, 1, 0, 1, 1);
         this._settings.bind('redmine-url', redmineURL, 'text', Gio.SettingsBindFlags.DEFAULT);
+        redmineURL.connect('changed', Lang.bind(this, this._refreshCurlHelp));
 
         generalTab.attach(new Gtk.Label({ label: _('API access key'), halign : Gtk.Align.END}), 0, 1, 1, 1);
         let apiAccessKey = new Gtk.Entry({ hexpand: true });
         generalTab.attach(apiAccessKey, 1, 1, 1, 1);
         this._settings.bind('api-access-key', apiAccessKey, 'text', Gio.SettingsBindFlags.DEFAULT);
+        apiAccessKey.connect('changed', Lang.bind(this, this._refreshCurlHelp));
 
         generalTab.attach(new Gtk.Label({ label: _('Auto refresh (min)'), halign : Gtk.Align.END}), 0, 2, 1, 1);
         let autoRefresh = Gtk.SpinButton.new_with_range (0, 60, 1);
@@ -118,7 +120,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         
         let filterHelp = _('Examples:') + '\n<i>status_id=1&amp;project_id=my-project</i>\n' +
             '<i>assigned_to_id=me&amp;status_id=open</i>\n' +
-            _('More information:') + ' <a href="http://www.redmine.org/projects/redmine/wiki/Rest_Issues">Rest Issue</a>'
+            _('More information:') + ' <a href="http://www.redmine.org/projects/redmine/wiki/Rest_Issues">Rest Issue</a>';
         filtersTab.attach(new Gtk.Label({label : filterHelp, use_markup : true, halign : Gtk.Align.START}), 0, 0, 1, 1);
 
         let filtersData = this._settings.get_strv('filters');
@@ -127,6 +129,22 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         filtersScroll.add_with_viewport(new Gtk.TextView({buffer :  this._filtersBuffer}));
         this._filtersBuffer.connect('changed', Lang.bind(this, this._filtersChanged));
         filtersTab.attach(filtersScroll, 0, 1, 1, 1);
+
+        filtersTab.attach(new Gtk.Label({ label: _('For check filter use:'), halign : Gtk.Align.START}), 0, 2, 1, 1);
+        this._curlHelp = new Gtk.Entry({ hexpand: true, editable: false});
+        filtersTab.attach(this._curlHelp, 0, 3, 1, 1);
+        this._refreshCurlHelp();
+    },
+
+    _refreshCurlHelp : function(){
+        let url = this._settings.get_string('redmine-url');
+        let key = this._settings.get_string('api-access-key');
+        if(url && url.slice(-1) != '/')
+            url += '/';
+        if(url && key) {
+            this._curlHelp.text = 'curl -H "X-Redmine-API-Key: ' + key + '" ' + url +'issues.json?{Filter}';
+        } else
+            this._curlHelp.text = '';
     },
 
     _filtersChanged : function(){

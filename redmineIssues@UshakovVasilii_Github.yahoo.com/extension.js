@@ -60,25 +60,21 @@ const RedmineIssues = new Lang.Class({
 
     _autoRefreshChanged : function(){
         if(this._timeoutId) {
-            // global.log('[RI] remove timeout');
             Mainloop.source_remove(this._timeoutId);
             this._timeoutId = null;
         }
         let timeout = this._settings.get_int('auto-refresh');
         if(timeout > 0){
-            // global.log('[RI] add timeout');
             this._timeoutId = Mainloop.timeout_add_seconds(timeout * 60, Lang.bind(this, this._startTimer));
         }
     },
 
     _startTimer : function(){
-        // global.log('[RI] start timer');
         let timeout = this._settings.get_int('auto-refresh');
         if(timeout > 0) {
             this._refresh();
             this._timeoutId = Mainloop.timeout_add_seconds(timeout * 60, Lang.bind(this, this._startTimer));
         }
-        // global.log('[RI] refresh by timer finish');
     },
 
     _maxSubjectWidthChanged : function(){
@@ -158,38 +154,123 @@ const RedmineIssues = new Lang.Class({
     },
 
     _refresh : function() {
-        let groupByKey = this._settings.get_string('group-by');
+        if(this._refreshing){
+            return;
+        }
+        this._refreshing = true;
+        this._issuesForCheck = [];
         for(let i in this._issuesStorage.issues){
-            let oldIssue = this._issuesStorage.issues[i];
-            this._loadIssue(i, Lang.bind(this, function(newIssue) {    
-                if(!this._issuesStorage.updateIssueUnreadFields(newIssue))
-                    return;
+            this._issuesForCheck.push(parseInt(i, 10));
+        }
 
-                let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
-                let item = this._issueItems[groupId][newIssue.id];
-                item.issueLabel.add_style_class_name('ri-issue-label-unread');
-                this._addMarkReadButton(item);
-
-                let groupChanged = false;
-                IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
-                    let jsonKey = key.replace('-','_');
-                    if(newIssue.unread_fields.indexOf(jsonKey) >= 0){
-                        if(this._settings.get_boolean('show-status-item-' + key))
-                            this._makeLabelNew(item, key, key == 'done-ratio' ? newIssue.done_ratio + '%' : newIssue[jsonKey].name);
-                        if(groupByKey == key && (oldIssue[jsonKey] && newIssue[jsonKey] && oldIssue[jsonKey].id != newIssue[jsonKey].id
-                                || oldIssue[jsonKey] && !newIssue[jsonKey] || !oldIssue[jsonKey] && newIssue[jsonKey])){
-                            groupChanged=true;
-                        }
-                    }
-                }));
-
-                if(groupChanged){
-                    this._removeIssueMenuItem(oldIssue);
-                    this._addIssueMenuItem(newIssue);
-                } else {
-                    this._refreshGroupStyleClass(groupId);
-                }
+        let filters = this._settings.get_strv('filters');
+        this._filtersForCheck = filters.slice(0);
+        if(filters && filters.length > 0){
+            filters.forEach(Lang.bind(this, function(filter){
+                this._loadIssues(filter, Lang.bind(this, this._refreshIssueMenuItem));
             }));
+        } else {
+            for(let i in this._issuesStorage.issues){
+                this._loadIssue(i, Lang.bind(this, this._refreshIssueMenuItem));
+            }
+        }
+    },
+
+    _loadIssues : function(filter, callback){
+        let redmineUrl = this._settings.get_string('redmine-url');
+        if(redmineUrl && redmineUrl.slice(-1) != '/')
+            redmineUrl += '/';
+        let request = Soup.Message.new('GET', redmineUrl + 'issues.json?' + filter);
+        request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
+
+        session.queue_message(request, Lang.bind(this, function(session, response) {
+            if(response.status_code == 200){
+                let issues=JSON.parse(response.response_body.data).issues;
+                if(issues && issues.length > 0){
+                    for(let i in issues){
+                        let issue = issues[i];
+                        let issueId = parseInt(issue.id, 10);
+                        let issueIndex = this._issuesForCheck.indexOf(issueId);
+                        if (issueIndex > -1) {
+                            this._issuesForCheck.splice(issueIndex, 1);
+                        }
+                        callback(this._convertIssueFromResponse(issue));
+                    }
+                }
+            } else if(response.status_code && response.status_code >= 100) {
+                Main.notify(_('Cannot load filter "%s", error status_code=%s').format(filter, response.status_code));
+            }
+            let filterIndex = this._filtersForCheck.indexOf(filter);
+            if (filterIndex > -1) {
+                this._filtersForCheck.splice(filterIndex, 1);
+            }
+  
+            if(this._issuesForCheck.length == 0){
+                this._refreshing = false;
+            } else if(this._filtersForCheck.length == 0){
+                for(let i in this._issuesForCheck){
+                    this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._refreshIssueMenuItem));
+                }
+            }
+        }));
+    },
+
+    _loadIssue : function(id, callback){
+        id = parseInt(id, 10);
+        let redmineUrl = this._settings.get_string('redmine-url');
+        if(redmineUrl && redmineUrl.slice(-1) != '/')
+            redmineUrl += '/';
+        let request = Soup.Message.new('GET', redmineUrl + 'issues/' + id + '.json');
+        request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
+
+        session.queue_message(request, Lang.bind(this, function(session, response) {
+            if(response.status_code == 200){
+                let issue=JSON.parse(response.response_body.data).issue;
+                callback(this._convertIssueFromResponse(issue));
+            } else if(response.status_code && response.status_code >= 100) {
+                Main.notify(_('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
+            }
+            if(this._issuesForCheck){
+                 var index = this._issuesForCheck.indexOf(id);
+                 if (index > -1) {
+                     this._issuesForCheck.splice(index, 1);
+                     if(this._refreshing && this._issuesForCheck.length == 0){
+                         this._refreshing = false;
+                     }
+                 }
+            }
+        }));
+    },
+
+    _refreshIssueMenuItem : function(newIssue) {
+        let oldIssue = this._issuesStorage.issues[newIssue.id];
+        if(!this._issuesStorage.updateIssueUnreadFields(newIssue))
+            return;
+
+        let groupByKey = this._settings.get_string('group-by');
+        let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
+        let item = this._issueItems[groupId][newIssue.id];
+        item.issueLabel.add_style_class_name('ri-issue-label-unread');
+        this._addMarkReadButton(item);
+
+        let groupChanged = false;
+        IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
+            let jsonKey = key.replace('-','_');
+            if(newIssue.unread_fields.indexOf(jsonKey) >= 0){
+                if(this._settings.get_boolean('show-status-item-' + key))
+                    this._makeLabelNew(item, key, key == 'done-ratio' ? newIssue.done_ratio + '%' : newIssue[jsonKey].name);
+                if(groupByKey == key && (oldIssue[jsonKey] && newIssue[jsonKey] && oldIssue[jsonKey].id != newIssue[jsonKey].id
+                        || oldIssue[jsonKey] && !newIssue[jsonKey] || !oldIssue[jsonKey] && newIssue[jsonKey])){
+                    groupChanged=true;
+                }
+            }
+        }));
+
+        if(groupChanged){
+            this._removeIssueMenuItem(oldIssue);
+            this._addIssueMenuItem(newIssue);
+        } else {
+            this._refreshGroupStyleClass(groupId);
         }
     },
 
@@ -348,7 +429,8 @@ const RedmineIssues = new Lang.Class({
     _makeMenuItemRead : function(item){
         this._makeLabelsRead(item);
         item.issueLabel.remove_style_class_name('ri-issue-label-unread');
-        item.buttonBox.markReadButton.destroy();
+        if(item.buttonBox.markReadButton)
+            item.buttonBox.markReadButton.destroy();
         let issue = this._issuesStorage.issues[item.issueId];
         let groupByKey = this._settings.get_string('group-by');
         let groupId = issue[groupByKey] ? issue[groupByKey].id : -1;
@@ -356,7 +438,10 @@ const RedmineIssues = new Lang.Class({
     },
 
     _issueItemAtivated : function(item) {
-        let url = this._settings.get_string('redmine-url') + 'issues/' + item.issueId;
+        let redmineUrl = this._settings.get_string('redmine-url');
+        if(redmineUrl && redmineUrl.slice(-1) != '/')
+            redmineUrl += '/';
+        let url = redmineUrl + 'issues/' + item.issueId;
         Util.spawn(['xdg-open', url]);
         this._issuesStorage.updateIssueToRead(item.issueId);
         this._makeMenuItemRead(item);
@@ -371,24 +456,8 @@ const RedmineIssues = new Lang.Class({
                 issue[jsonKey]=value;
         });
         return issue;
-    },
-
-    _loadIssue : function(id, callback){
-        let url = this._settings.get_string('redmine-url');
-        if(url && url.slice(-1) != '/')
-            url += '/';
-        let request = Soup.Message.new('GET', url + 'issues/' + id + '.json');
-        request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
-
-        session.queue_message(request, Lang.bind(this, function(session, response) {
-            if(response.status_code == 200){
-                let issue=JSON.parse(response.response_body.data).issue;
-                callback(this._convertIssueFromResponse(issue));
-            } else if(response.status_code && response.status_code >= 100) {
-                Main.notify(_('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
-            }
-        }));
     }
+
 });
 
 function init() {

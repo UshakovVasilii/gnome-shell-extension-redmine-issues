@@ -157,22 +157,34 @@ const RedmineIssues = new Lang.Class({
         if(this._refreshing){
             return;
         }
-        this._refreshing = true;
-        this.commandMenuItem.refreshButton.child.icon_name ='content-loading-symbolic';
+
         this._issuesForCheck = [];
         for(let i in this._issuesStorage.issues){
             this._issuesForCheck.push(parseInt(i, 10));
         }
 
+        this._refreshing = true;
+        this.commandMenuItem.refreshButton.child.icon_name ='content-loading-symbolic';
+
         let filters = this._settings.get_strv('filters');
         this._filtersForCheck = filters.slice(0);
         if(filters && filters.length > 0){
             filters.forEach(Lang.bind(this, function(filter){
-                this._loadIssues(filter, Lang.bind(this, this._refreshIssueMenuItem));
+                this._loadIssues(filter, Lang.bind(this, function(newIssue){
+                    if(this._issuesStorage.addIssue(newIssue)) {
+                        this._addIssueMenuItem(newIssue);
+                    } else {
+                        this._refreshIssueMenuItem(newIssue);
+                    }
+                }));
             }));
         } else {
-            for(let i in this._issuesStorage.issues){
-                this._loadIssue(i, Lang.bind(this, this._refreshIssueMenuItem));
+            if(this._issuesForCheck.length==0) {
+                this._finishRefresh();
+            } else {
+                for(let i in this._issuesStorage.issues){
+                    this._loadIssue(i, Lang.bind(this, this._refreshIssueMenuItem));
+                }
             }
         }
     },

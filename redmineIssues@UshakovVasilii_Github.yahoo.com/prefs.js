@@ -120,10 +120,21 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
             '<i>assigned_to_id=me&amp;status_id=open</i>\n' +
             _('More information:') + ' <a href="http://www.redmine.org/projects/redmine/wiki/Rest_Issues">Rest Issue</a>'
         filtersTab.attach(new Gtk.Label({label : filterHelp, use_markup : true, halign : Gtk.Align.START}), 0, 0, 1, 1);
-        let filters = new Gtk.TextView();
+
+        let filtersData = this._settings.get_strv('filters');
+        this._filtersBuffer = new Gtk.TextBuffer({ text: filtersData.join('\n')});
         let filtersScroll = new Gtk.ScrolledWindow({expand : true, shadow_type: Gtk.ShadowType.ETCHED_IN});
-        filtersScroll.add_with_viewport(filters);
+        filtersScroll.add_with_viewport(new Gtk.TextView({buffer :  this._filtersBuffer}));
+        this._filtersBuffer.connect('changed', Lang.bind(this, this._filtersChanged));
         filtersTab.attach(filtersScroll, 0, 1, 1, 1);
+    },
+
+    _filtersChanged : function(){
+         let text = this._filtersBuffer.text;
+         let filtersData = [];
+         if(text)
+             filtersData = text.split('\n');
+         this._settings.set_strv('filters', filtersData);
     },
 
     _addSwitch : function(params){

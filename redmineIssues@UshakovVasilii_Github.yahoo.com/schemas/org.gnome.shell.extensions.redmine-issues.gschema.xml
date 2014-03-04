@@ -65,5 +65,9 @@
 			<default>600</default>
 			<summary>Min Menu Item Width</summary>
 		</key>
+		<key name="filters" type="as">
+			<default>[]</default>
+			<summary>Filters</summary>
+		</key>
 	</schema>
 </schemalist>

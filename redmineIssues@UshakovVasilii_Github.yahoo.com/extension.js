@@ -420,6 +420,8 @@ const RedmineIssues = new Lang.Class({
     },
 
     _addMarkReadButton : function(item){
+        if(item.buttonBox.markReadButton)
+            return;
         item.buttonBox.markReadButton = new St.Button({
             child: new St.Icon({icon_name: 'object-select-symbolic', style_class: 'system-status-icon'})
         });
@@ -447,8 +449,10 @@ const RedmineIssues = new Lang.Class({
     _makeMenuItemRead : function(item){
         this._makeLabelsRead(item);
         item.issueLabel.remove_style_class_name('ri-issue-label-unread');
-        if(item.buttonBox.markReadButton)
+        if(item.buttonBox.markReadButton) {
             item.buttonBox.markReadButton.destroy();
+            item.buttonBox.markReadButton = null;
+        }
         let issue = this._issuesStorage.issues[item.issueId];
         let groupByKey = this._settings.get_string('group-by');
         let groupId = issue[groupByKey] ? issue[groupByKey].id : -1;

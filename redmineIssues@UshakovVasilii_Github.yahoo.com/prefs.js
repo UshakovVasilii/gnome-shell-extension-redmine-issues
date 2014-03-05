@@ -119,7 +119,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         this.append_page(filtersTab,  new Gtk.Label({label: _('Filters')}));
         
         let filterHelp = _('Examples:') + '\n<i>status_id=1&amp;project_id=my-project</i>\n' +
-            '<i>assigned_to_id=me&amp;status_id=open</i>\n' +
+            '<i>assigned_to_id=me&amp;status_id=open // You can add comments</i>\n' +
             _('More information:') + ' <a href="http://www.redmine.org/projects/redmine/wiki/Rest_Issues">Rest Issue</a>';
         filtersTab.attach(new Gtk.Label({label : filterHelp, use_markup : true, halign : Gtk.Align.START}), 0, 0, 1, 1);
 

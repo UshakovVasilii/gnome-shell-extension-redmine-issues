@@ -166,9 +166,18 @@ const RedmineIssues = new Lang.Class({
         this._refreshing = true;
         this.commandMenuItem.refreshButton.child.icon_name ='content-loading-symbolic';
 
-        let filters = this._settings.get_strv('filters');
+        let filters = []
+        let srcFilters = this._settings.get_strv('filters');
+        for(let i in srcFilters){
+            let filter = srcFilters[i];
+            let index = filter.indexOf('//',10);
+            if(index > 0)
+                filter = filter.slice(0, index);
+            filters.push(filter.trim());
+        }
+        
         this._filtersForCheck = filters.slice(0);
-        if(filters && filters.length > 0){
+        if(filters.length > 0){
             filters.forEach(Lang.bind(this, function(filter){
                 this._loadIssues(filter, Lang.bind(this, function(newIssue){
                     if(this._issuesStorage.addIssue(newIssue)) {

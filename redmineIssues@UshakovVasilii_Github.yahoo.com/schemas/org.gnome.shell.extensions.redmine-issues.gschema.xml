@@ -17,10 +17,6 @@
 			<default>30</default>
 			<summary>Auto refresh</summary>
 		</key>
-		<key name="issues" type="as">
-			<default>[]</default>
-			<summary>Issues</summary>
-		</key>
 		<key name="show-status-item-status" type="b">
 			<default>true</default>
 			<summary>Show Status</summary>

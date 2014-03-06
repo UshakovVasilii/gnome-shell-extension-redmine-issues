@@ -336,6 +336,8 @@ const RedmineIssues = new Lang.Class({
 
     _addIssueClicked : function() {
         let addIssueDialog = new AddIssueDialog.AddIssueDialog(Lang.bind(this, function(issueId){
+            if(!issueId)
+                return;
             this._loadIssue(issueId, Lang.bind(this, function(issue) {
                 if(this._issuesStorage.addIssue(issue)) {
                     this._addIssueMenuItem(issue);

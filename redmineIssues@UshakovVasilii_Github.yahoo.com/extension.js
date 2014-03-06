@@ -38,7 +38,9 @@ const RedmineIssues = new Lang.Class({
             style_class: 'system-status-icon'
         }));
 
+        this._debugEnabled = this._settings.get_boolean('logs');
         this._issuesStorage = new IssueStorage.IssueStorage();
+        this._issuesStorage.debugEnabled = this._debugEnabled;
 
         this._addIssueMenuItems();
 
@@ -54,8 +56,14 @@ const RedmineIssues = new Lang.Class({
         this._settingChangedSignals.push(this._settings.connect('changed::max-subject-width', Lang.bind(this, this._maxSubjectWidthChanged)));
         this._settingChangedSignals.push(this._settings.connect('changed::min-menu-item-width', Lang.bind(this, this._minMenuItemWidthChanged)));
         this._settingChangedSignals.push(this._settings.connect('changed::auto-refresh', Lang.bind(this, this._autoRefreshChanged)));
+        this._settingChangedSignals.push(this._settings.connect('changed::logs', Lang.bind(this, this._logsChanged)));
 
         this._startTimer();
+    },
+
+    _logsChanged : function(){
+        this._debugEnabled = this._settings.get_boolean('logs');
+        this._issuesStorage.debugEnabled = this._debugEnabled;
     },
 
     _autoRefreshChanged : function(){
@@ -199,6 +207,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _loadIssues : function(filter, callback){
+        this._debug('Load filter "' + filter + '"...');
         let redmineUrl = this._settings.get_string('redmine-url');
         if(redmineUrl && redmineUrl.slice(-1) != '/')
             redmineUrl += '/';
@@ -206,9 +215,11 @@ const RedmineIssues = new Lang.Class({
         request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
 
         session.queue_message(request, Lang.bind(this, function(session, response) {
+            this._debug('Filter "' + filter + '" loaded, status_code=' + response.status_code);
             if(response.status_code == 200){
                 let issues=JSON.parse(response.response_body.data).issues;
                 if(issues && issues.length > 0){
+                    this._debug('issues count=' + issues.length);
                     for(let i in issues){
                         let issue = issues[i];
                         let issueId = parseInt(issue.id, 10);
@@ -218,6 +229,8 @@ const RedmineIssues = new Lang.Class({
                         }
                         callback(this._convertIssueFromResponse(issue));
                     }
+                } else {
+                    this._debug('issues is empty');
                 }
             } else if(response.status_code && response.status_code >= 100) {
                 Main.notify(_('Cannot load filter "%s", error status_code=%s').format(filter, response.status_code));
@@ -238,6 +251,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _loadIssue : function(id, callback){
+        this._debug('Load issue #' + id + '...');
         id = parseInt(id, 10);
         let redmineUrl = this._settings.get_string('redmine-url');
         if(redmineUrl && redmineUrl.slice(-1) != '/')
@@ -246,6 +260,7 @@ const RedmineIssues = new Lang.Class({
         request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
 
         session.queue_message(request, Lang.bind(this, function(session, response) {
+            this._debug('Issue "' + id + '" loaded, status_code=' + response.status_code);
             if(response.status_code == 200){
                 let issue=JSON.parse(response.response_body.data).issue;
                 callback(this._convertIssueFromResponse(issue));
@@ -382,6 +397,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _addIssueMenuItem : function(issue){
+        this._debug('Add issue menu item... #' + issue.id);
         let item = new PopupMenu.PopupBaseMenuItem();
         item.issueId = issue.id;
 
@@ -487,7 +503,12 @@ const RedmineIssues = new Lang.Class({
                 issue[jsonKey]=value;
         });
         return issue;
-    }
+    },
+
+    _debug : function(message){
+        if(this._debugEnabled)
+            global.log('[redmine-issues] ' + message);
+    },
 
 });
 

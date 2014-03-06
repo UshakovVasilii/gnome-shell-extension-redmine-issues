@@ -40,11 +40,18 @@ const IssueStorage = new Lang.Class({
         }
     },
 
+    _debug : function(message){
+        if(this.debugEnabled)
+            global.log('[redmine-issues] ' + message);
+    },
+
     save : function(){
+        this._debug('Saving...');
         let file = Gio.file_new_for_path(GLib.get_user_data_dir() + '/redmine-issues/issues.json');
         let out = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
         Shell.write_string_to_stream(out, JSON.stringify(this.issues, null, '\t'));
         out.close(null);
+        this._debug('Issues saved');
     },
 
     updateIssue : function(issue){

@@ -65,5 +65,10 @@
 			<default>[]</default>
 			<summary>Filters</summary>
 		</key>
+
+		<key name="logs" type="b">
+			<default>false</default>
+			<summary>Logs</summary>
+		</key>
 	</schema>
 </schemalist>

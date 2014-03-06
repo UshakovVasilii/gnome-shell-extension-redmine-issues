@@ -281,6 +281,7 @@ const RedmineIssues = new Lang.Class({
 
     _finishRefresh : function(){
         this._refreshing = false;
+        this._issuesStorage.save();
         this.commandMenuItem.refreshButton.child.icon_name ='view-refresh-symbolic';
     },
 
@@ -288,7 +289,6 @@ const RedmineIssues = new Lang.Class({
         let oldIssue = this._issuesStorage.issues[newIssue.id];
         if(!this._issuesStorage.updateIssueUnreadFields(newIssue))
             return;
-
         let groupByKey = this._settings.get_string('group-by');
         let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
         let item = this._issueItems[groupId][newIssue.id];
@@ -339,6 +339,7 @@ const RedmineIssues = new Lang.Class({
             this._loadIssue(issueId, Lang.bind(this, function(issue) {
                 if(this._issuesStorage.addIssue(issue)) {
                     this._addIssueMenuItem(issue);
+                    this._issuesStorage.save();
                 }
             }));
         }));
@@ -353,6 +354,7 @@ const RedmineIssues = new Lang.Class({
             Lang.bind(this, function() {
                 this._issuesStorage.removeIssue(issue.id);
                 this._removeIssueMenuItem(issue);
+                this._issuesStorage.save();
             })
         );
         this.menu.close();
@@ -453,6 +455,7 @@ const RedmineIssues = new Lang.Class({
         item.buttonBox.markReadButton.connect('clicked', Lang.bind(this, function(){
             this._issuesStorage.updateIssueToRead(item.issueId);
             this._makeMenuItemRead(item);
+            this._issuesStorage.save();
         }));
         item.buttonBox.insert_child_at_index(item.buttonBox.markReadButton, 0);
     },
@@ -492,6 +495,7 @@ const RedmineIssues = new Lang.Class({
         Util.spawn(['xdg-open', url]);
         this._issuesStorage.updateIssueToRead(item.issueId);
         this._makeMenuItemRead(item);
+        this._issuesStorage.save();
     },
 
     _convertIssueFromResponse : function(srcIssue){

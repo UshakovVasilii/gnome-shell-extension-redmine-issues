@@ -46,11 +46,16 @@ const IssueStorage = new Lang.Class({
     },
 
     save : function(){
+        if(!this._hasChanges){
+            this._debug('Nothing to save');
+            return;
+        }
         this._debug('Saving...');
         let file = Gio.file_new_for_path(GLib.get_user_data_dir() + '/redmine-issues/issues.json');
         let out = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
         Shell.write_string_to_stream(out, JSON.stringify(this.issues, null, '\t'));
         out.close(null);
+        this._hasChanges = false;
         this._debug('Issues saved');
     },
 
@@ -58,7 +63,7 @@ const IssueStorage = new Lang.Class({
         if(!this.issues[issue.id])
             return false;
         this.issues[issue.id] = issue;
-        this.save();
+        this._hasChanges = true;
         return true;
     },
 
@@ -80,14 +85,14 @@ const IssueStorage = new Lang.Class({
         });
 
         this.issues[issue.id] = issue;
-        this.save();
+        this._hasChanges = true;
         return true;
     },
 
     removeIssue : function(issueId) {
         let data = [];
         delete this.issues[issueId];
-        this.save();
+        this._hasChanges = true;
         return true;
     },
 

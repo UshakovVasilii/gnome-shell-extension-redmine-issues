@@ -23,15 +23,15 @@ const IssueStorage = new Lang.Class({
         if(!GLib.file_test(path, GLib.FileTest.EXISTS))
             GLib.mkdir_with_parents(path, 493);
 
-        let issuesPath = GLib.build_filenamev([path, 'issues.json']);
-        if(!GLib.file_test(issuesPath, GLib.FileTest.EXISTS))
-            GLib.file_set_contents(issuesPath, '');
+        this._issuesPath = GLib.build_filenamev([path, 'issues.json']);
+        if(!GLib.file_test(this._issuesPath, GLib.FileTest.EXISTS))
+            GLib.file_set_contents(this._issuesPath, '');
 
         this._loadIssues();
     },
 
     _loadIssues : function(){
-        let issuesFile = Gio.file_new_for_path(GLib.get_user_data_dir() + '/redmine-issues/issues.json');
+        let issuesFile = Gio.file_new_for_path(this._issuesPath);
         let data = Shell.get_file_contents_utf8_sync(issuesFile.get_path());
         if(data){
             this.issues = JSON.parse(data);
@@ -51,7 +51,7 @@ const IssueStorage = new Lang.Class({
             return;
         }
         this._debug('Saving...');
-        let file = Gio.file_new_for_path(GLib.get_user_data_dir() + '/redmine-issues/issues.json');
+        let file = Gio.file_new_for_path(this._issuesPath);
         let out = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
         Shell.write_string_to_stream(out, JSON.stringify(this.issues, null, '\t'));
         out.close(null);
@@ -120,8 +120,8 @@ const IssueStorage = new Lang.Class({
         if(oldIssue.updated_on != newIssue.updated_on && newIssue.unread_fields.indexOf('updated_on') < 0)
             newIssue.unread_fields.push('updated_on');
 
-	this.updateIssue(newIssue);
-	return true;
+        this.updateIssue(newIssue);
+        return true;
     }
 
 });

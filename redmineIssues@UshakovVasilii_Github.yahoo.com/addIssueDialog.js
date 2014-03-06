@@ -1,7 +1,6 @@
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
 const St = imports.gi.St;
-const Signals = imports.signals;
 
 const ModalDialog = imports.ui.modalDialog;
 
@@ -13,37 +12,30 @@ const AddIssueDialog = new Lang.Class({
     Extends: ModalDialog.ModalDialog,
 
     _init: function(callback) {
+        this.parent();
         this.callback = callback;
-        this.parent({
-            styleClass: 'prompt-dialog'
+        
+
+        let addIssueTitle = new St.Label({
+            style_class: 'ri-dialog-subject',
+            text: _("Enter issue id")
         });
 
-        let label = new St.Label({
-            style_class: 'edit-dialog-label',
-            text: _("Add Issue")
-        });
+        this.contentLayout.add(addIssueTitle);
 
-        this.contentLayout.add(label, {
-            y_align: St.Align.START
-        });
+        let issueEntry = new St.Entry();
+        issueEntry.label_actor = addIssueTitle;
 
-        let entry = new St.Entry({
-            style_class: 'edit-dialog-entry'
-        });
-        entry.label_actor = label;
-
-        this._entryText = entry.clutter_text;
-        this.contentLayout.add(entry, {
-            y_align: St.Align.START
-        });
-        this.setInitialKeyFocus(this._entryText);
+        this._issueText = issueEntry.clutter_text;
+        this.contentLayout.add(issueEntry);
+        this.setInitialKeyFocus(this._issueText);
 
         this.setButtons([
-            {label : _('Cancel'),action: Lang.bind(this, this._onCancelButton), key: Clutter.Escape },
+            {label : _('Cancel'),action: Lang.bind(this, this.close), key: Clutter.Escape },
             {label : _('Ok'),action: Lang.bind(this, this._onOkButton)}
         ]);
 
-        this._entryText.connect('key-press-event', Lang.bind(this, function(o, e) {
+        this._issueText.connect('key-press-event', Lang.bind(this, function(o, e) {
             let symbol = e.get_key_symbol();
             if (symbol == Clutter.Return || symbol == Clutter.KP_Enter) {
                 this._onOkButton();
@@ -51,21 +43,11 @@ const AddIssueDialog = new Lang.Class({
         }));
     },
 
-    close: function() {
-        this.parent();
-    },
-
-    _onCancelButton: function() {
-        this.close();
-    },
-
     _onOkButton: function() {
-        let text = this._entryText.get_text();
+        let text = this._issueText.get_text();
         if(text)
             text = text.replace(/[^0-9]/g, '');
         this.callback(text);
         this.close();
     }
 });
-Signals.addSignalMethods(AddIssueDialog.prototype);
-

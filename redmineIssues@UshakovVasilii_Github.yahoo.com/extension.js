@@ -349,8 +349,8 @@ const RedmineIssues = new Lang.Class({
 
     _removeIssueClicked : function(issue){
         let confirmDialog = new ConfirmDialog.ConfirmDialog(
-            _('Confirm #%s removal').format(issue.id),
-            _('Select OK to delete \n"%s"\n or cancel to abort').format(issue.subject),
+            _('Delete #%s').format(issue.id),
+            _('Are you sure you want to delete "%s"?').format(issue.subject),
             Lang.bind(this, function() {
                 this._issuesStorage.removeIssue(issue.id);
                 this._removeIssueMenuItem(issue);
@@ -404,7 +404,7 @@ const RedmineIssues = new Lang.Class({
         item.issueId = issue.id;
 
         item.statusLabels = {};
-        item.issueLabel = new St.Label({text: '#' + issue.id + ' - ' + issue.subject, style_class: 'ri-subject-label'});
+        item.issueLabel = new St.Label({text: '#' + issue.id + ' - ' + issue.subject});
         item.issueLabel.style = 'max-width:' + this._settings.get_int('max-subject-width') + 'px';
         let unread = issue.unread_fields.length > 0;
         if(unread)

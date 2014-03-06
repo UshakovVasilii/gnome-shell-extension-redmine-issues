@@ -1,21 +1,27 @@
 .ri-popup-status-menu-item-new {
-  font-style: oblique;
+    font-style: oblique;
 }
 
 .ri-popup-menu-item-status-labels {
-  spacing: 1em;
+    spacing: 1em;
 }
 
 .ri-issue-label-unread {
-  font-style: oblique;
-  font-weight: bold;
+    font-style: oblique;
+    font-weight: bold;
 }
 
 .ri-group-label-unread {
-  font-style: oblique;
-  font-weight: bold;
+    font-style: oblique;
+    font-weight: bold;
 }
 
-.ri-subject-label {
-  text-overflow: ellipsis;
+.ri-dialog-subject {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #999999;
+}
+
+.ri-dialog-message {
+    max-width : 600px;
 }

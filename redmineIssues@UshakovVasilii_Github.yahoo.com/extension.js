@@ -7,6 +7,7 @@ const Soup = imports.gi.Soup;
 const Util = imports.misc.util;
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
+const Shell = imports.gi.Shell;
 
 const session = new Soup.SessionAsync();
 Soup.Session.prototype.add_feature.call(session, new Soup.ProxyResolverDefault());
@@ -46,7 +47,7 @@ const RedmineIssues = new Lang.Class({
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        this._addCommandMenuItem();
+        this._checkMainPrefs();
 
         this._settingChangedSignals = [];
         IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
@@ -57,8 +58,35 @@ const RedmineIssues = new Lang.Class({
         this._settingChangedSignals.push(this._settings.connect('changed::min-menu-item-width', Lang.bind(this, this._minMenuItemWidthChanged)));
         this._settingChangedSignals.push(this._settings.connect('changed::auto-refresh', Lang.bind(this, this._autoRefreshChanged)));
         this._settingChangedSignals.push(this._settings.connect('changed::logs', Lang.bind(this, this._logsChanged)));
+        this._settingChangedSignals.push(this._settings.connect('changed::redmine-url', Lang.bind(this, this._checkMainPrefs)));
+        this._settingChangedSignals.push(this._settings.connect('changed::api-access-key', Lang.bind(this, this._checkMainPrefs)));
 
         this._startTimer();
+    },
+
+    _checkMainPrefs : function(){
+        let hasIssues = Object.keys(this._issuesStorage.issues).length!=0;
+        let apiAccessKey = this._settings.get_string('api-access-key');
+        let redmineUrl = this._settings.get_string('redmine-url');
+        this._isMainPrefsValid = !(!apiAccessKey || !redmineUrl || redmineUrl=='http://');
+        if(!hasIssues && !this._isMainPrefsValid){
+            if(!this.helpMenuItem) {
+                if(this.commandMenuItem){
+                    this.commandMenuItem.destroy();
+                    this.commandMenuItem = null;
+                }
+            
+                this.helpMenuItem = new PopupMenu.PopupMenuItem(_('You should input "Api Access Key" and "Redmine URL"'));
+                this.helpMenuItem.connect('activate', this._openAppPreferences);
+                this.menu.addMenuItem(this.helpMenuItem);
+            }
+        } else if(!this.commandMenuItem) {
+            if(this.helpMenuItem) {
+                this.helpMenuItem.destroy();
+                this.helpMenuItem = null;
+            }
+            this._addCommandMenuItem();
+        }
     },
 
     _logsChanged : function(){
@@ -162,7 +190,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _refresh : function() {
-        if(this._refreshing){
+        if(this._refreshing || !this._isMainPrefsValid){
             return;
         }
 
@@ -211,7 +239,13 @@ const RedmineIssues = new Lang.Class({
         let redmineUrl = this._settings.get_string('redmine-url');
         if(redmineUrl && redmineUrl.slice(-1) != '/')
             redmineUrl += '/';
-        let request = Soup.Message.new('GET', redmineUrl + 'issues.json?' + filter);
+        let url = redmineUrl + 'issues.json?' + filter;
+        let request = Soup.Message.new('GET', url);
+        if(!request){
+           this._debug('request is null, "' + url + '" is wrong');
+           this._continueOrFinishIssuesLoading(filter);
+           return;
+        }
         request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
 
         session.queue_message(request, Lang.bind(this, function(session, response) {
@@ -235,19 +269,24 @@ const RedmineIssues = new Lang.Class({
             } else if(response.status_code && response.status_code >= 100) {
                 Main.notify(_('Cannot load filter "%s", error status_code=%s').format(filter, response.status_code));
             }
-            let filterIndex = this._filtersForCheck.indexOf(filter);
-            if (filterIndex > -1) {
-                this._filtersForCheck.splice(filterIndex, 1);
-            }
   
-            if(this._issuesForCheck.length == 0){
-                this._finishRefresh();
-            } else if(this._filtersForCheck.length == 0){
-                for(let i in this._issuesForCheck){
-                    this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._refreshIssueMenuItem));
-                }
-            }
+            this._continueOrFinishIssuesLoading(filter);
         }));
+    },
+
+    _continueOrFinishIssuesLoading : function(filter){
+        let filterIndex = this._filtersForCheck.indexOf(filter);
+        if (filterIndex > -1) {
+            this._filtersForCheck.splice(filterIndex, 1);
+        }
+  
+        if(this._issuesForCheck.length == 0){
+            this._finishRefresh();
+        } else if(this._filtersForCheck.length == 0){
+            for(let i in this._issuesForCheck){
+               this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._refreshIssueMenuItem));
+           }
+        }
     },
 
     _loadIssue : function(id, callback){
@@ -256,7 +295,15 @@ const RedmineIssues = new Lang.Class({
         let redmineUrl = this._settings.get_string('redmine-url');
         if(redmineUrl && redmineUrl.slice(-1) != '/')
             redmineUrl += '/';
-        let request = Soup.Message.new('GET', redmineUrl + 'issues/' + id + '.json');
+        let url = redmineUrl + 'issues/' + id + '.json';
+        let request = Soup.Message.new('GET', url);
+
+        if(!request){
+            this._debug('request is null, "' + url + '" is wrong');
+            this._continueOrFinishIssueLoading(id);
+            return;
+        }
+
         request.request_headers.append('X-Redmine-API-Key', this._settings.get_string('api-access-key'));
 
         session.queue_message(request, Lang.bind(this, function(session, response) {
@@ -267,16 +314,20 @@ const RedmineIssues = new Lang.Class({
             } else if(response.status_code && response.status_code >= 100) {
                 Main.notify(_('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
             }
-            if(this._issuesForCheck){
-                 var index = this._issuesForCheck.indexOf(id);
-                 if (index > -1) {
-                     this._issuesForCheck.splice(index, 1);
-                     if(this._refreshing && this._issuesForCheck.length == 0){
-                         this._finishRefresh();
-                     }
-                 }
-            }
+            this._continueOrFinishIssueLoading(id);
         }));
+    },
+
+    _continueOrFinishIssueLoading : function(id){
+        if(this._issuesForCheck){
+            let index = this._issuesForCheck.indexOf(id);
+            if (index > -1) {
+                this._issuesForCheck.splice(index, 1);
+                if(this._refreshing && this._issuesForCheck.length == 0){
+                    this._finishRefresh();
+                }
+            }
+        }
     },
 
     _finishRefresh : function(){
@@ -509,6 +560,15 @@ const RedmineIssues = new Lang.Class({
                 issue[jsonKey]=value;
         });
         return issue;
+    },
+
+    _openAppPreferences : function(){
+        let prefs = Shell.AppSystem.get_default().lookup_app('gnome-shell-extension-prefs.desktop');
+        if(prefs.get_state() == prefs.SHELL_APP_STATE_RUNNING){
+            prefs.activate();
+        } else {
+            prefs.launch(global.display.get_current_time_roundtrip(), [Me.metadata.uuid],-1,null);
+        }
     },
 
     _debug : function(message){

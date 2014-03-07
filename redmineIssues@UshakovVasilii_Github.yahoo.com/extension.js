@@ -8,6 +8,7 @@ const Util = imports.misc.util;
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const Shell = imports.gi.Shell;
+const System = imports.ui.status.system;
 
 const session = new Soup.SessionAsync();
 Soup.Session.prototype.add_feature.call(session, new Soup.ProxyResolverDefault());
@@ -155,14 +156,34 @@ const RedmineIssues = new Lang.Class({
             style_class: 'system-menu-action'
         });
         addIssueButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
-        this.commandMenuItem.actor.add(addIssueButton, { expand: true, x_fill: false });
+
+        this.commandMenuItem.removeAllIssueButton = new St.Button({
+            child: new St.Icon({icon_name: 'list-remove-all-symbolic'}),
+            style_class: 'system-menu-action'
+        });
+
+        let addRemoveSwitcher = new System.AltSwitcher(addIssueButton, this.commandMenuItem.removeAllIssueButton);
+        this.commandMenuItem.actor.add(addRemoveSwitcher.actor, { expand: true, x_fill: false });
+        addIssueButton.visible = true;
+        // TODO issue count
+        this.commandMenuItem.removeAllIssueButton.visible = true;
 
         this.commandMenuItem.refreshButton = new St.Button({
-                    child: new St.Icon({icon_name: 'view-refresh-symbolic'}),
+            child: new St.Icon({icon_name: 'view-refresh-symbolic'}),
             style_class: 'system-menu-action'
         });
         this.commandMenuItem.refreshButton.connect('clicked', Lang.bind(this, this._refresh));
-        this.commandMenuItem.actor.add(this.commandMenuItem.refreshButton, { expand: true, x_fill: false });
+
+        this.commandMenuItem.refreshAllButton = new St.Button({
+            child: new St.Icon({icon_name: 'emblem-synchronizing-symbolic'}),
+            style_class: 'system-menu-action'
+        });
+
+        let refreshSwitcher = new System.AltSwitcher(this.commandMenuItem.refreshButton, this.commandMenuItem.refreshAllButton);
+        this.commandMenuItem.actor.add(refreshSwitcher.actor, { expand: true, x_fill: false });
+        this.commandMenuItem.refreshButton.visible = true;
+        // TODO issue count
+        this.commandMenuItem.refreshAllButton.visible = true;
 
         this.menu.addMenuItem(this.commandMenuItem);
     },

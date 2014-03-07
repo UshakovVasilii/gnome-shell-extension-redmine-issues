@@ -8,7 +8,6 @@ const Util = imports.misc.util;
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const Shell = imports.gi.Shell;
-const System = imports.ui.status.system;
 
 const session = new Soup.SessionAsync();
 Soup.Session.prototype.add_feature.call(session, new Soup.ProxyResolverDefault());
@@ -22,6 +21,7 @@ const Convenience = Me.imports.convenience;
 const AddIssueDialog = Me.imports.addIssueDialog;
 const ConfirmDialog = Me.imports.confirmDialog;
 const IssueStorage = Me.imports.issueStorage;
+const Commands = Me.imports.commands;
 
 let redmineIssues = null;
 
@@ -33,7 +33,6 @@ const RedmineIssues = new Lang.Class({
         this.parent(St.Align.START);
 
         this._settings = Convenience.getSettings();
-        
 
         this.actor.add_actor(new St.Icon({
             gicon: Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-symbolic.svg'),
@@ -51,18 +50,23 @@ const RedmineIssues = new Lang.Class({
         this._checkMainPrefs();
 
         this._settingChangedSignals = [];
+        this.connect('destroy', Lang.bind(this, this._onDestroy));
         IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            this._settingChangedSignals.push(this._settings.connect('changed::show-status-item-' + key, Lang.bind(this, this._reloadStatusLabels)));
+            this._addSettingChangedSignal('show-status-item-' + key, Lang.bind(this, this._reloadStatusLabels));
         }));
-        this._settingChangedSignals.push(this._settings.connect('changed::group-by', Lang.bind(this, this._groupByChanged)));
-        this._settingChangedSignals.push(this._settings.connect('changed::max-subject-width', Lang.bind(this, this._maxSubjectWidthChanged)));
-        this._settingChangedSignals.push(this._settings.connect('changed::min-menu-item-width', Lang.bind(this, this._minMenuItemWidthChanged)));
-        this._settingChangedSignals.push(this._settings.connect('changed::auto-refresh', Lang.bind(this, this._autoRefreshChanged)));
-        this._settingChangedSignals.push(this._settings.connect('changed::logs', Lang.bind(this, this._logsChanged)));
-        this._settingChangedSignals.push(this._settings.connect('changed::redmine-url', Lang.bind(this, this._checkMainPrefs)));
-        this._settingChangedSignals.push(this._settings.connect('changed::api-access-key', Lang.bind(this, this._checkMainPrefs)));
+        this._addSettingChangedSignal('group-by', Lang.bind(this, this._groupByChanged));
+        this._addSettingChangedSignal('max-subject-width', Lang.bind(this, this._maxSubjectWidthChanged));
+        this._addSettingChangedSignal('min-menu-item-width', Lang.bind(this, this._minMenuItemWidthChanged));
+        this._addSettingChangedSignal('auto-refresh', Lang.bind(this, this._autoRefreshChanged));
+        this._addSettingChangedSignal('logs', Lang.bind(this, this._logsChanged));
+        this._addSettingChangedSignal('redmine-url', Lang.bind(this, this._checkMainPrefs));
+        this._addSettingChangedSignal('api-access-key', Lang.bind(this, this._checkMainPrefs));
 
         this._startTimer();
+    },
+
+    _addSettingChangedSignal : function(key, callback){
+        this._settingChangedSignals.push(this._settings.connect('changed::' + key, callback));
     },
 
     _checkMainPrefs : function(){
@@ -72,16 +76,16 @@ const RedmineIssues = new Lang.Class({
         this._isMainPrefsValid = !(!apiAccessKey || !redmineUrl || redmineUrl=='http://');
         if(!hasIssues && !this._isMainPrefsValid){
             if(!this.helpMenuItem) {
-                if(this.commandMenuItem){
-                    this.commandMenuItem.destroy();
-                    this.commandMenuItem = null;
+                if(this.commands){
+                    this.commands.destroy();
+                    this.commands = null;
                 }
             
                 this.helpMenuItem = new PopupMenu.PopupMenuItem(_('You should input "Api Access Key" and "Redmine URL"'));
                 this.helpMenuItem.connect('activate', this._openAppPreferences);
                 this.menu.addMenuItem(this.helpMenuItem);
             }
-        } else if(!this.commandMenuItem) {
+        } else if(!this.commands) {
             if(this.helpMenuItem) {
                 this.helpMenuItem.destroy();
                 this.helpMenuItem = null;
@@ -125,7 +129,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _minMenuItemWidthChanged : function(){
-        this.commandMenuItem.actor.style = 'min-width:' + this._settings.get_int('min-menu-item-width') + 'px';
+        this.commands.setMinWidth(this._settings.get_int('min-menu-item-width'));
     },
 
     _addIssueMenuItems : function(){
@@ -146,69 +150,18 @@ const RedmineIssues = new Lang.Class({
     },
 
     _addCommandMenuItem : function(){
-        this.commandMenuItem = new PopupMenu.PopupBaseMenuItem({
-            reactive: false,
-            can_focus: false});
-        this.commandMenuItem.actor.style = 'min-width:' + this._settings.get_int('min-menu-item-width') + 'px';
+        this.commands = new Commands.Commands();
+        this.commands.setMinWidth(this._settings.get_int('min-menu-item-width'));
 
-        // AddIssue/Preferences
-        let addIssueButton = new St.Button({
-            child: new St.Icon({icon_name: 'list-add-symbolic'}),
-            style_class: 'system-menu-action'
-        });
-        addIssueButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
+        this.commands.addIssueButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
+        this.commands.preferencesButton.connect('clicked', Lang.bind(this, this._openAppPreferences));
+        this.commands.refreshButton.connect('clicked', Lang.bind(this, this._refresh));
 
-        let prefButton = new St.Button({
-            child: new St.Icon({icon_name: 'preferences-system-symbolic'}),
-            style_class: 'system-menu-action'
-        });
-        prefButton.connect('clicked', Lang.bind(this, this._openAppPreferences));
-
-        let addPrefSwitcher = new System.AltSwitcher(addIssueButton, prefButton);
-        this.commandMenuItem.actor.add(addPrefSwitcher.actor, { expand: true, x_fill: false });
-        addIssueButton.visible = true;
-        prefButton.visible = true;
-
-        // MarkRead All / Remove All
-        let markReadAllButton = new St.Button({
-            child: new St.Icon({icon_name: 'edit-clear-all-symbolic'}),
-            style_class: 'system-menu-action'
-        });
-
-        let removeAllButton = new St.Button({
-            child: new St.Icon({icon_name: 'list-remove-all-symbolic'}),
-            style_class: 'system-menu-action'
-        });
-
-        let markReadRemoveAllSwitcher = new System.AltSwitcher(markReadAllButton, removeAllButton);
-        this.commandMenuItem.actor.add(markReadRemoveAllSwitcher.actor, { expand: true, x_fill: false });
-
-        markReadAllButton.visible = true;
-        removeAllButton.visible = true;
-
-        // Refresh / Reload
-        this.commandMenuItem.refreshButton = new St.Button({
-            child: new St.Icon({icon_name: 'view-refresh-symbolic'}),
-            style_class: 'system-menu-action'
-        });
-        this.commandMenuItem.refreshButton.connect('clicked', Lang.bind(this, this._refresh));
-
-        this.commandMenuItem.reloadButton = new St.Button({
-            child: new St.Icon({icon_name: 'emblem-synchronizing-symbolic'}),
-            style_class: 'system-menu-action'
-        });
-
-        let refreshReloadSwitcher = new System.AltSwitcher(this.commandMenuItem.refreshButton, this.commandMenuItem.reloadButton);
-        this.commandMenuItem.actor.add(refreshReloadSwitcher.actor, { expand: true, x_fill: false });
-        this.commandMenuItem.refreshButton.visible = true;
-        // TODO issue count
-        this.commandMenuItem.refreshButton.visible = true;
-        this.commandMenuItem.reloadButton.visible = true;
-
-        this.menu.addMenuItem(this.commandMenuItem);
+        this.menu.addMenuItem(this.commands.commandMenuItem);
     },
 
-    disconnectSignalsAndStopTimer : function(){
+    _onDestroy : function(){
+        this._debug('Destroy');
         let settings = this._settings;
         this._settingChangedSignals.forEach(function(signal){
             settings.disconnect(signal);
@@ -241,7 +194,7 @@ const RedmineIssues = new Lang.Class({
         }
 
         this._refreshing = true;
-        this.commandMenuItem.refreshButton.child.icon_name ='content-loading-symbolic';
+        this.commands.refreshButton.child.icon_name ='content-loading-symbolic';
 
         let filters = []
         let srcFilters = this._settings.get_strv('filters');
@@ -374,7 +327,7 @@ const RedmineIssues = new Lang.Class({
     _finishRefresh : function(){
         this._refreshing = false;
         this._issuesStorage.save();
-        this.commandMenuItem.refreshButton.child.icon_name ='view-refresh-symbolic';
+        this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
     },
 
     _refreshIssueMenuItem : function(newIssue) {
@@ -613,6 +566,7 @@ const RedmineIssues = new Lang.Class({
         } else {
             prefs.launch(global.display.get_current_time_roundtrip(), [Me.metadata.uuid],-1,null);
         }
+        this.menu.close();
     },
 
     _debug : function(message){
@@ -632,7 +586,6 @@ function enable() {
 };
 
 function disable() {
-    redmineIssues.disconnectSignalsAndStopTimer();
     redmineIssues.destroy();
     redmineIssues=null;
 };

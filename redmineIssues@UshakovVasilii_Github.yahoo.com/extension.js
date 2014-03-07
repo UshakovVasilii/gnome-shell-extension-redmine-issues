@@ -358,6 +358,9 @@ const RedmineIssues = new Lang.Class({
                 }
             }
         }));
+        if(newIssue.unread_fields.indexOf('subject') >= 0){
+            item.issueLabel.text = '#' + newIssue.id + ' - ' + newIssue.subject;
+        }
 
         if(groupChanged){
             this._removeIssueMenuItem(oldIssue);

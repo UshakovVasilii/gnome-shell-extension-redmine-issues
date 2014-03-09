@@ -339,7 +339,7 @@ const RedmineIssues = new Lang.Class({
         let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
         let item = this._issueItems[groupId][newIssue.id];
         item.issueLabel.add_style_class_name('ri-issue-label-unread');
-        this._addMarkReadButton(item);
+        this._showMarkReadButton(item);
 
         let groupChanged = false;
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
@@ -467,8 +467,17 @@ const RedmineIssues = new Lang.Class({
         item.buttonBox = new St.BoxLayout();
         item.actor.add(item.buttonBox);
 
+        item.buttonBox.markReadButton = new St.Button({
+            child: new St.Icon({icon_name: 'object-select-symbolic', style_class: 'system-status-icon'})
+        });
+        item.buttonBox.markReadButton.connect('clicked', Lang.bind(this, function(){
+            this._issuesStorage.updateIssueToRead(item.issueId);
+            this._makeMenuItemRead(item);
+            this._issuesStorage.save();
+        }));
+
         if(unread)
-          this._addMarkReadButton(item);
+          this._showMarkReadButton(item);
 
         let removeIssueButton = new St.Button({
             child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
@@ -496,18 +505,11 @@ const RedmineIssues = new Lang.Class({
         this._debug('Finish add issue menu item #' + issue.id);
     },
 
-    _addMarkReadButton : function(item){
-        if(item.buttonBox.markReadButton)
+    _showMarkReadButton : function(item){
+        if(item.buttonBox.isMarkReadButtonShown)
             return;
-        item.buttonBox.markReadButton = new St.Button({
-            child: new St.Icon({icon_name: 'object-select-symbolic', style_class: 'system-status-icon'})
-        });
-        item.buttonBox.markReadButton.connect('clicked', Lang.bind(this, function(){
-            this._issuesStorage.updateIssueToRead(item.issueId);
-            this._makeMenuItemRead(item);
-            this._issuesStorage.save();
-        }));
         item.buttonBox.insert_child_at_index(item.buttonBox.markReadButton, 0);
+        item.buttonBox.isMarkReadButtonShown = true;
     },
 
     _refreshGroupStyleClass : function(groupId){
@@ -527,9 +529,9 @@ const RedmineIssues = new Lang.Class({
     _makeMenuItemRead : function(item){
         this._makeLabelsRead(item);
         item.issueLabel.remove_style_class_name('ri-issue-label-unread');
-        if(item.buttonBox.markReadButton) {
-            item.buttonBox.markReadButton.destroy();
-            item.buttonBox.markReadButton = null;
+        if(item.buttonBox.isMarkReadButtonShown) {
+            item.buttonBox.remove_child(item.buttonBox.markReadButton);
+            item.buttonBox.isMarkReadButtonShown = false;
         }
         let issue = this._issuesStorage.issues[item.issueId];
         let groupByKey = this._settings.get_string('group-by');

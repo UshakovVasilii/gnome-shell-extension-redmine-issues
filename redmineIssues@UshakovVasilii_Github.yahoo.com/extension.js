@@ -18,6 +18,7 @@ const _ = Gettext.gettext;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
+const Сonstants = Me.imports.constants;
 const AddIssueDialog = Me.imports.addIssueDialog;
 const ConfirmDialog = Me.imports.confirmDialog;
 const IssueStorage = Me.imports.issueStorage;
@@ -51,8 +52,8 @@ const RedmineIssues = new Lang.Class({
 
         this._settingChangedSignals = [];
         this.connect('destroy', Lang.bind(this, this._onDestroy));
-        IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            this._addSettingChangedSignal('show-status-item-' + key, Lang.bind(this, this._reloadStatusLabels));
+        Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
+            this._addSettingChangedSignal('show-status-item-' + key.replace('_','-'), Lang.bind(this, this._reloadStatusLabels));
         }));
         this._addSettingChangedSignal('group-by', Lang.bind(this, this._groupByChanged));
         this._addSettingChangedSignal('max-subject-width', Lang.bind(this, this._maxSubjectWidthChanged));
@@ -341,13 +342,12 @@ const RedmineIssues = new Lang.Class({
         this._addMarkReadButton(item);
 
         let groupChanged = false;
-        IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            let jsonKey = key.replace('-','_');
-            if(newIssue.unread_fields.indexOf(jsonKey) >= 0){
-                if(this._settings.get_boolean('show-status-item-' + key))
-                    this._makeLabelNew(item, key, key == 'done-ratio' ? newIssue.done_ratio + '%' : newIssue[jsonKey].name);
-                if(groupByKey == key && (oldIssue[jsonKey] && newIssue[jsonKey] && oldIssue[jsonKey].id != newIssue[jsonKey].id
-                        || oldIssue[jsonKey] && !newIssue[jsonKey] || !oldIssue[jsonKey] && newIssue[jsonKey])){
+        Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
+            if(newIssue.unread_fields.indexOf(key) >= 0){
+                if(this._settings.get_boolean('show-status-item-' + key.replace('_','-')))
+                    this._makeLabelNew(item, key, key == 'done_ratio' ? newIssue.done_ratio + '%' : newIssue[key].name);
+                if(groupByKey == key && (oldIssue[key] && newIssue[key] && oldIssue[key].id != newIssue[key].id
+                        || oldIssue[key] && !newIssue[key] || !oldIssue[key] && newIssue[key])){
                     groupChanged=true;
                 }
             }
@@ -375,7 +375,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _makeLabelsRead : function(item){
-        IssueStorage.LABEL_KEYS.forEach(function(key){
+        Сonstants.LABEL_KEYS.forEach(function(key){
             let label = item.statusLabels[key];
             if(label)
                 label.style_class = 'popup-status-menu-item';
@@ -435,15 +435,14 @@ const RedmineIssues = new Lang.Class({
     _addStatusLabels : function(item){
         let issue = this._issuesStorage.issues[item.issueId];
 
-        IssueStorage.LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            if(!this._settings.get_boolean('show-status-item-' + key))
+        Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
+            if(!this._settings.get_boolean('show-status-item-' + key.replace('_','-')))
                 return;
-            let jsonKey = key.replace('-','_');
-            let styleClass = issue.unread_fields.indexOf(jsonKey) >= 0 ? 'ri-popup-status-menu-item-new' : 'popup-status-menu-item';
-            if(key == 'done-ratio' && (issue.done_ratio || issue.done_ratio==0)) {
-                this._addStatusLabel(item, 'done-ratio', issue.done_ratio + '%', styleClass);
-            } else if(issue[jsonKey]) {
-                this._addStatusLabel(item, key, issue[jsonKey].name, styleClass);
+            let styleClass = issue.unread_fields.indexOf(key) >= 0 ? 'ri-popup-status-menu-item-new' : 'popup-status-menu-item';
+            if(key == 'done_ratio' && (issue.done_ratio || issue.done_ratio==0)) {
+                this._addStatusLabel(item, 'done_ratio', issue.done_ratio + '%', styleClass);
+            } else if(issue[key]) {
+                this._addStatusLabel(item, key, issue[key].name, styleClass);
             }
         }));
     },
@@ -482,7 +481,7 @@ const RedmineIssues = new Lang.Class({
         item.connect('activate', Lang.bind(this, this._issueItemAtivated));
 
         let groupByKey = this._settings.get_string('group-by');
-        
+
         let groupId = issue[groupByKey] ? issue[groupByKey].id : -1;
         let issueItem = this._issueGroupItems[groupId];
         if(!issueItem){
@@ -494,6 +493,7 @@ const RedmineIssues = new Lang.Class({
         this._issueItems[groupId][issue.id] = item;
         issueItem.menu.addMenuItem(item);
         this._refreshGroupStyleClass(groupId);
+        this._debug('Finish add issue menu item #' + issue.id);
     },
 
     _addMarkReadButton : function(item){
@@ -550,11 +550,10 @@ const RedmineIssues = new Lang.Class({
 
     _convertIssueFromResponse : function(srcIssue){
         let issue = {id:srcIssue.id, subject : srcIssue.subject, updated_on : srcIssue.updated_on};
-        IssueStorage.LABEL_KEYS.forEach(function(key){
-            let jsonKey = key.replace('-','_');
-            let value = srcIssue[jsonKey];
+        Сonstants.LABEL_KEYS.forEach(function(key){
+            let value = srcIssue[key];
             if(value || value==0)
-                issue[jsonKey]=value;
+                issue[key]=value;
         });
         return issue;
     },

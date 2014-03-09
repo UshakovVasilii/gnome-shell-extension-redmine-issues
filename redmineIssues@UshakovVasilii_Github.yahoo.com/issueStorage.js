@@ -3,16 +3,9 @@ const Shell = imports.gi.Shell;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 
-const LABEL_KEYS = [
-    'status',
-    'assigned-to',
-    'tracker',
-    'priority',
-    'done-ratio',
-    'author',
-    'project',
-    'fixed-version',
-    'category'];
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const Сonstants = Me.imports.constants;
 
 const IssueStorage = new Lang.Class({
     Name: 'IssueStorage',
@@ -77,11 +70,10 @@ const IssueStorage = new Lang.Class({
         if(this.issues[issue.id])
             return false;
         issue.unread_fields = ['subject'];
-        LABEL_KEYS.forEach(function(key){
-            let jsonKey = key.replace('-','_');
-            let value = issue[jsonKey];
+        Сonstants.LABEL_KEYS.forEach(function(key){
+            let value = issue[key];
             if(value || value==0)
-                issue.unread_fields.push(jsonKey);
+                issue.unread_fields.push(key);
         });
 
         this.issues[issue.id] = issue;
@@ -104,14 +96,13 @@ const IssueStorage = new Lang.Class({
         newIssue.unread_fields = oldIssue.unread_fields;
         if(!newIssue.unread_fields)
             newIssue.unread_fields = [];
-        LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            let jsonKey = key.replace('-','_');
-            if(key == 'done-ratio' && (newIssue.done_ratio || newIssue.done_ratio==0) && oldIssue.done_ratio != newIssue.done_ratio){
-                if(newIssue.unread_fields.indexOf(jsonKey) < 0)
-                    newIssue.unread_fields.push(jsonKey);
-            } else if(newIssue[jsonKey] && (!oldIssue[jsonKey] || oldIssue[jsonKey].id != newIssue[jsonKey].id)) {
-                if(newIssue.unread_fields.indexOf(jsonKey) < 0)
-                    newIssue.unread_fields.push(jsonKey);
+        Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
+            if(key == 'done_ratio' && (newIssue.done_ratio || newIssue.done_ratio==0) && oldIssue.done_ratio != newIssue.done_ratio){
+                if(newIssue.unread_fields.indexOf(key) < 0)
+                    newIssue.unread_fields.push(key);
+            } else if(newIssue[key] && (!oldIssue[key] || oldIssue[key].id != newIssue[key].id)) {
+                if(newIssue.unread_fields.indexOf(key) < 0)
+                    newIssue.unread_fields.push(key);
             }
         }));
 

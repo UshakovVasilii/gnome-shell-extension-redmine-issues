@@ -24,6 +24,14 @@ const Commands = new Lang.Class({
         this.reloadButton = this._createButton('emblem-synchronizing-symbolic');
         this._addSwitcher(this.refreshButton, this.reloadButton);
 
+        this._makeVisible();
+    },
+
+    sync : function(){
+        this._makeVisible();
+    },
+
+    _makeVisible : function(){
         this.addIssueButton.visible = true;
         this.preferencesButton.visible = true;
         this.markAllReadButton.visible = true;

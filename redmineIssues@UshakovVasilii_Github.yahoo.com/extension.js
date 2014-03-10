@@ -51,6 +51,11 @@ const RedmineIssues = new Lang.Class({
 
         this._checkMainPrefs();
 
+        this.menu.connect('open-state-changed', Lang.bind(this, function(){
+            if(this.commands)
+                this.commands.sync();
+        }));
+
         this._settingChangedSignals = [];
         this.connect('destroy', Lang.bind(this, this._onDestroy));
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){

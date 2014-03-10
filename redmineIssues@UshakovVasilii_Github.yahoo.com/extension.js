@@ -164,6 +164,8 @@ const RedmineIssues = new Lang.Class({
         this.commands.preferencesButton.connect('clicked', Lang.bind(this, this._openAppPreferences));
         this.commands.refreshButton.connect('clicked', Lang.bind(this, this._refresh));
         this.commands.removeAllButton.connect('clicked', Lang.bind(this, this._removeAllClicked));
+        this.commands.markAllReadButton.connect('clicked', Lang.bind(this, this._markAllReadClicked));
+        // this.commands.reloadButton.connect('clicked', Lang.bind(this, this._xxx));
 
         this.menu.addMenuItem(this.commands.commandMenuItem);
     },
@@ -182,6 +184,17 @@ const RedmineIssues = new Lang.Class({
         );
         this.menu.close();
         confirmDialog.open();
+    },
+
+    _markAllReadClicked : function(){
+        for(let groupKey in this._issueItems){
+            for(let itemKey in this._issueItems[groupKey]){
+                let item = this._issueItems[groupKey][itemKey];
+                this._issuesStorage.updateIssueToRead(item.issueId);
+                this._makeMenuItemRead(item);
+            }
+        }
+        this._issuesStorage.save();
     },
 
     _onDestroy : function(){

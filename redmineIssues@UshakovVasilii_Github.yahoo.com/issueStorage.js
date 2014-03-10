@@ -88,6 +88,12 @@ const IssueStorage = new Lang.Class({
         return true;
     },
 
+    removeAll : function(issueId) {
+        this.issues = {};
+        this._hasChanges = true;
+        return true;
+    },
+
     updateIssueUnreadFields : function(newIssue){
         let oldIssue = this.issues[newIssue.id];
         if(oldIssue.updated_on == newIssue.updated_on)

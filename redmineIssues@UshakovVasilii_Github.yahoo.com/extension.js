@@ -163,8 +163,25 @@ const RedmineIssues = new Lang.Class({
         this.commands.addIssueButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
         this.commands.preferencesButton.connect('clicked', Lang.bind(this, this._openAppPreferences));
         this.commands.refreshButton.connect('clicked', Lang.bind(this, this._refresh));
+        this.commands.removeAllButton.connect('clicked', Lang.bind(this, this._removeAllClicked));
 
         this.menu.addMenuItem(this.commands.commandMenuItem);
+    },
+
+    _removeAllClicked : function(){
+        let confirmDialog = new ConfirmDialog.ConfirmDialog(
+            _('Delete all issues'),
+            _('Are you sure you want to delete all issues?'),
+            Lang.bind(this, function() {
+                for(let issueId in this._issuesStorage.issues){
+                    this._removeIssueMenuItem(this._issuesStorage.issues[issueId]);
+                }
+                this._issuesStorage.removeAll();
+                this._issuesStorage.save();
+            })
+        );
+        this.menu.close();
+        confirmDialog.open();
     },
 
     _onDestroy : function(){
@@ -386,7 +403,7 @@ const RedmineIssues = new Lang.Class({
             })
         );
         this.menu.close();
-            confirmDialog.open();
+        confirmDialog.open();
     },
 
     _removeIssueMenuItem : function(issue){

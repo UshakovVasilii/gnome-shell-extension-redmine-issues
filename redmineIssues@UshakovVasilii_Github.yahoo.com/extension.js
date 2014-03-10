@@ -121,11 +121,11 @@ const RedmineIssues = new Lang.Class({
     },
 
     _maxSubjectWidthChanged : function(){
-        let maxSubjectWidth = this._settings.get_int('max-subject-width');
+        let width = this._settings.get_int('max-subject-width');
         for(let groupKey in this._issueItems){
             for(let itemKey in this._issueItems[groupKey]){
                 let item = this._issueItems[groupKey][itemKey];
-                item.label.style = 'max-width:' + maxSubjectWidth + 'px';
+                item.setMaxWidth(width);
             }
         }
     },
@@ -334,29 +334,23 @@ const RedmineIssues = new Lang.Class({
             return;
         let groupByKey = this._settings.get_string('group-by');
         let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
-        let item = this._issueItems[groupId][newIssue.id];
-        item.label.add_style_class_name('ri-issue-label-unread');
-        item.showMarkReadButton();
 
         let groupChanged = false;
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
             if(newIssue.unread_fields.indexOf(key) >= 0){
-                if(this._settings.get_boolean('show-status-item-' + key.replace('_','-')))
-                    item.makeLabelNew(key, key == 'done_ratio' ? newIssue.done_ratio + '%' : newIssue[key].name);
                 if(groupByKey == key && (oldIssue[key] && newIssue[key] && oldIssue[key].id != newIssue[key].id
                         || oldIssue[key] && !newIssue[key] || !oldIssue[key] && newIssue[key])){
                     groupChanged=true;
                 }
             }
         }));
-        if(newIssue.unread_fields.indexOf('subject') >= 0){
-            item.label.text = '#' + newIssue.id + ' - ' + newIssue.subject;
-        }
 
         if(groupChanged){
             this._removeIssueMenuItem(oldIssue);
             this._addIssueMenuItem(newIssue);
         } else {
+            let item = this._issueItems[groupId][newIssue.id];
+            item.makeUnread(newIssue);
             this._refreshGroupStyleClass(groupId);
         }
     },

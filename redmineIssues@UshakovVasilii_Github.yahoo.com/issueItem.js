@@ -18,44 +18,48 @@ const IssueItem = new Lang.Class({
         this.menuItem = new PopupMenu.PopupBaseMenuItem();
         this.issueId = issue.id;
 
-        this.statusLabels = {};
-        this.label = new St.Label({text: '#' + issue.id + ' - ' + issue.subject});
-        this.label.style = 'max-width:' + this._settings.get_int('max-subject-width') + 'px';
+        this._statusLabels = {};
+        this._label = new St.Label({text: '#' + issue.id + ' - ' + issue.subject});
+        this.setMaxWidth(this._settings.get_int('max-subject-width'));
         let unread = issue.unread_fields.length > 0;
         if(unread)
-            this.label.add_style_class_name('ri-issue-label-unread');
+            this._label.add_style_class_name('ri-issue-label-unread');
 
-        this.menuItem.actor.add(this.label,{x_fill: true, expand: true});
+        this.menuItem.actor.add(this._label,{x_fill: true, expand: true});
 
-        this.statusLabelBox = new St.BoxLayout({style_class: 'ri-popup-menu-item-status-labels'});
-        this.menuItem.actor.add(this.statusLabelBox);
+        this._statusLabelBox = new St.BoxLayout({style_class: 'ri-popup-menu-item-status-labels'});
+        this.menuItem.actor.add(this._statusLabelBox);
         this._addStatusLabels(issue);
-        this.buttonBox = new St.BoxLayout();
-        this.menuItem.actor.add(this.buttonBox);
+        this._buttonBox = new St.BoxLayout();
+        this.menuItem.actor.add(this._buttonBox);
         this.markReadButton = new St.Button({
             child: new St.Icon({icon_name: 'object-select-symbolic', style_class: 'system-status-icon'})
         });
 
         if(unread)
-          this.showMarkReadButton();
+          this._showMarkReadButton();
 
         this.removeIssueButton = new St.Button({
             child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
         });
-        this.buttonBox.add(this.removeIssueButton);
+        this._buttonBox.add(this.removeIssueButton);
     },
 
-    showMarkReadButton : function(){
+    setMaxWidth : function(width){
+        this._label.style = 'max-width:' + width + 'px';
+    },
+
+    _showMarkReadButton : function(){
         if(this.isMarkReadButtonShown)
             return;
-        this.buttonBox.insert_child_at_index(this.markReadButton, 0);
+        this._buttonBox.insert_child_at_index(this.markReadButton, 0);
         this.isMarkReadButtonShown = true;
     },
 
     _addStatusLabel : function(key, text, styleClass){
         let label = new St.Label({text: text, style_class: styleClass});
-        this.statusLabels[key] = label;
-        this.statusLabelBox.add(label);
+        this._statusLabels[key] = label;
+        this._statusLabelBox.add(label);
     },
 
     _addStatusLabels : function(issue){
@@ -72,15 +76,15 @@ const IssueItem = new Lang.Class({
     },
 
     reloadStatusLabels : function(issue){
-        for(let labelKey in this.statusLabels){
-            this.statusLabels[labelKey].destroy();
+        for(let labelKey in this._statusLabels){
+            this._statusLabels[labelKey].destroy();
         }
-        this.statusLabels = {};
+        this._statusLabels = {};
         this._addStatusLabels(issue);
     },
 
-    makeLabelNew : function(key, text){
-        let label = this.statusLabels[key];
+    _makeLabelNew : function(key, text){
+        let label = this._statusLabels[key];
         if(label) {
             label.style_class = 'ri-popup-status-menu-item-new';
             label.set_text(text);
@@ -91,14 +95,28 @@ const IssueItem = new Lang.Class({
 
     makeRead : function(){
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            let label = this.statusLabels[key];
+            let label = this._statusLabels[key];
             if(label)
                 label.style_class = 'popup-status-menu-item';
         }));
-        this.label.remove_style_class_name('ri-issue-label-unread');
+        this._label.remove_style_class_name('ri-issue-label-unread');
         if(this.isMarkReadButtonShown) {
-            this.buttonBox.remove_child(this.markReadButton);
+            this._buttonBox.remove_child(this.markReadButton);
             this.isMarkReadButtonShown = false;
+        }
+    },
+
+    makeUnread : function(issue){
+        this._label.add_style_class_name('ri-issue-label-unread');
+        this._showMarkReadButton();
+        Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
+            if(issue.unread_fields.indexOf(key) >= 0){
+                if(this._settings.get_boolean('show-status-item-' + key.replace('_','-')))
+                    this._makeLabelNew(key, key == 'done_ratio' ? issue.done_ratio + '%' : issue[key].name);
+            }
+        }));
+        if(issue.unread_fields.indexOf('subject') >= 0){
+            this._label.text = '#' + issue.id + ' - ' + issue.subject;
         }
     }
 

@@ -62,8 +62,10 @@ const IssueStorage = new Lang.Class({
 
     updateIssueToRead : function(issueId){
         let issue = this.issues[issueId];
+        if(!issue.unread_fields || issue.unread_fields.length == 0)
+            return false;
         issue.unread_fields = [];
-        this.updateIssue(issue);
+        return this.updateIssue(issue);
     },
 
     addIssue : function(issue){

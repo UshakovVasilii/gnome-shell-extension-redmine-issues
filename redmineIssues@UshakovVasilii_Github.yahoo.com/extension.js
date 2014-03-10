@@ -120,7 +120,9 @@ const RedmineIssues = new Lang.Class({
     _startTimer : function(){
         let timeout = this._settings.get_int('auto-refresh');
         if(timeout > 0) {
-            this._refresh();
+            if(!(this._refreshing || !this._isMainPrefsValid)){
+               this._refresh();
+            }
             this._timeoutId = Mainloop.timeout_add_seconds(timeout * 60, Lang.bind(this, this._startTimer));
         }
     },
@@ -162,12 +164,34 @@ const RedmineIssues = new Lang.Class({
 
         this.commands.addIssueButton.connect('clicked', Lang.bind(this, this._addIssueClicked));
         this.commands.preferencesButton.connect('clicked', Lang.bind(this, this._openAppPreferences));
-        this.commands.refreshButton.connect('clicked', Lang.bind(this, this._refresh));
+        this.commands.refreshButton.connect('clicked', Lang.bind(this, this._refreshButtonClicked));
         this.commands.removeAllButton.connect('clicked', Lang.bind(this, this._removeAllClicked));
         this.commands.markAllReadButton.connect('clicked', Lang.bind(this, this._markAllReadClicked));
-        // this.commands.reloadButton.connect('clicked', Lang.bind(this, this._xxx));
+        this.commands.reloadButton.connect('clicked', Lang.bind(this, this._reloadIssues));
 
         this.menu.addMenuItem(this.commands.commandMenuItem);
+    },
+
+    _refreshButtonClicked : function(){
+        if(this._refreshing || !this._isMainPrefsValid){
+            return;
+        }
+        this._refresh();
+    },
+
+    _reloadIssues : function(){
+        if(this._refreshing || !this._isMainPrefsValid){
+            return;
+        }
+        this._reloading = true;
+        this._refresh();
+    },
+
+    _removeAllIssues : function(){
+        for(let issueId in this._issuesStorage.issues){
+            this._removeIssueMenuItem(this._issuesStorage.issues[issueId]);
+        }
+        this._issuesStorage.removeAll();
     },
 
     _removeAllClicked : function(){
@@ -175,10 +199,7 @@ const RedmineIssues = new Lang.Class({
             _('Delete all issues'),
             _('Are you sure you want to delete all issues?'),
             Lang.bind(this, function() {
-                for(let issueId in this._issuesStorage.issues){
-                    this._removeIssueMenuItem(this._issuesStorage.issues[issueId]);
-                }
-                this._issuesStorage.removeAll();
+                this._removeAllIssues();
                 this._issuesStorage.save();
             })
         );
@@ -217,17 +238,18 @@ const RedmineIssues = new Lang.Class({
     },
 
     _refresh : function() {
-        if(this._refreshing || !this._isMainPrefsValid){
-            return;
-        }
+        this._refreshing = true;
 
         this._issuesForCheck = [];
         for(let i in this._issuesStorage.issues){
             this._issuesForCheck.push(parseInt(i, 10));
         }
 
-        this._refreshing = true;
-        this.commands.refreshButton.child.icon_name ='content-loading-symbolic';
+        if(this._reloading) {
+            this.commands.reloadButton.child.icon_name='content-loading-symbolic';
+            this._removeAllIssues();
+        } else
+            this.commands.refreshButton.child.icon_name ='content-loading-symbolic';
 
         let filters = []
         let srcFilters = this._settings.get_strv('filters');
@@ -242,22 +264,24 @@ const RedmineIssues = new Lang.Class({
         this._filtersForCheck = filters.slice(0);
         if(filters.length > 0){
             filters.forEach(Lang.bind(this, function(filter){
-                this._loadIssues(filter, Lang.bind(this, function(newIssue){
-                    if(this._issuesStorage.addIssue(newIssue)) {
-                        this._addIssueMenuItem(newIssue);
-                    } else {
-                        this._refreshIssueMenuItem(newIssue);
-                    }
-                }));
+                this._loadIssues(filter, Lang.bind(this, this._addOrRefreshIssue));
             }));
         } else {
             if(this._issuesForCheck.length==0) {
                 this._finishRefresh();
             } else {
-                for(let i in this._issuesStorage.issues){
-                    this._loadIssue(i, Lang.bind(this, this._refreshIssueMenuItem));
+                for(let i in this._issuesForCheck){
+                    this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
                 }
             }
+        }
+    },
+
+    _addOrRefreshIssue : function(issue){
+        if(this._issuesStorage.addIssue(issue)) {
+            this._addIssueMenuItem(issue);
+        } else {
+            this._refreshIssueMenuItem(issue);
         }
     },
 
@@ -311,7 +335,7 @@ const RedmineIssues = new Lang.Class({
             this._finishRefresh();
         } else if(this._filtersForCheck.length == 0){
             for(let i in this._issuesForCheck){
-               this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._refreshIssueMenuItem));
+               this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
            }
         }
     },
@@ -360,7 +384,11 @@ const RedmineIssues = new Lang.Class({
     _finishRefresh : function(){
         this._refreshing = false;
         this._issuesStorage.save();
-        this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
+        if(this._reloading){
+            this.commands.reloadButton.child.icon_name='emblem-synchronizing-symbolic';
+            this._reloading = false;
+        } else
+            this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
     },
 
     _refreshIssueMenuItem : function(newIssue) {

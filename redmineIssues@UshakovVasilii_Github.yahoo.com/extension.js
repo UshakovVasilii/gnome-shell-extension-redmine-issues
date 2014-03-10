@@ -23,6 +23,7 @@ const AddIssueDialog = Me.imports.addIssueDialog;
 const ConfirmDialog = Me.imports.confirmDialog;
 const IssueStorage = Me.imports.issueStorage;
 const Commands = Me.imports.commands;
+const IssueItem = Me.imports.issueItem;
 
 let redmineIssues = null;
 
@@ -124,7 +125,7 @@ const RedmineIssues = new Lang.Class({
         for(let groupKey in this._issueItems){
             for(let itemKey in this._issueItems[groupKey]){
                 let item = this._issueItems[groupKey][itemKey];
-                item.issueLabel.style = 'max-width:' + maxSubjectWidth + 'px';
+                item.label.style = 'max-width:' + maxSubjectWidth + 'px';
             }
         }
     },
@@ -174,12 +175,8 @@ const RedmineIssues = new Lang.Class({
         for(let groupKey in this._issueItems){
             for(let itemKey in this._issueItems[groupKey]){
                 let item = this._issueItems[groupKey][itemKey];
-
-                for(let labelKey in item.statusLabels){
-                    item.statusLabels[labelKey].destroy();
-                }
-                item.statusLabels = {};
-                this._addStatusLabels(item);
+                let issue = this._issuesStorage.issues[item.issueId];
+                item.reloadStatusLabels(issue);
             }
         }
     },
@@ -338,14 +335,14 @@ const RedmineIssues = new Lang.Class({
         let groupByKey = this._settings.get_string('group-by');
         let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
         let item = this._issueItems[groupId][newIssue.id];
-        item.issueLabel.add_style_class_name('ri-issue-label-unread');
-        this._showMarkReadButton(item);
+        item.label.add_style_class_name('ri-issue-label-unread');
+        item.showMarkReadButton();
 
         let groupChanged = false;
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
             if(newIssue.unread_fields.indexOf(key) >= 0){
                 if(this._settings.get_boolean('show-status-item-' + key.replace('_','-')))
-                    this._makeLabelNew(item, key, key == 'done_ratio' ? newIssue.done_ratio + '%' : newIssue[key].name);
+                    item.makeLabelNew(key, key == 'done_ratio' ? newIssue.done_ratio + '%' : newIssue[key].name);
                 if(groupByKey == key && (oldIssue[key] && newIssue[key] && oldIssue[key].id != newIssue[key].id
                         || oldIssue[key] && !newIssue[key] || !oldIssue[key] && newIssue[key])){
                     groupChanged=true;
@@ -353,7 +350,7 @@ const RedmineIssues = new Lang.Class({
             }
         }));
         if(newIssue.unread_fields.indexOf('subject') >= 0){
-            item.issueLabel.text = '#' + newIssue.id + ' - ' + newIssue.subject;
+            item.label.text = '#' + newIssue.id + ' - ' + newIssue.subject;
         }
 
         if(groupChanged){
@@ -362,24 +359,6 @@ const RedmineIssues = new Lang.Class({
         } else {
             this._refreshGroupStyleClass(groupId);
         }
-    },
-
-    _makeLabelNew : function(item, key, text){
-        let label = item.statusLabels[key];
-        if(label) {
-            label.style_class = 'ri-popup-status-menu-item-new';
-            label.set_text(text);
-        } else {
-            this._addStatusLabel(item, key, text, 'ri-popup-status-menu-item-new');
-        }
-    },
-
-    _makeLabelsRead : function(item){
-        Сonstants.LABEL_KEYS.forEach(function(key){
-            let label = item.statusLabels[key];
-            if(label)
-                label.style_class = 'popup-status-menu-item';
-        });
     },
 
     _addIssueClicked : function() {
@@ -415,7 +394,7 @@ const RedmineIssues = new Lang.Class({
         let groupBy = this._settings.get_string('group-by');
 
         let groupId = issue[groupBy] ? issue[groupBy].id : -1;
-        this._issueItems[groupId][issue.id].destroy();
+        this._issueItems[groupId][issue.id].menuItem.destroy();
         delete this._issueItems[groupId][issue.id];
         if(Object.keys(this._issueItems[groupId]).length==0){
             delete this._issueItems[groupId];
@@ -426,68 +405,20 @@ const RedmineIssues = new Lang.Class({
         }
     },
 
-    _addStatusLabel : function(item, key, text, styleClass){
-        let label = new St.Label({text: text, style_class: styleClass});
-        item.statusLabels[key] = label;
-        item.statusLabelsBox.add(label);
-    },
-
-    _addStatusLabels : function(item){
-        let issue = this._issuesStorage.issues[item.issueId];
-
-        Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            if(!this._settings.get_boolean('show-status-item-' + key.replace('_','-')))
-                return;
-            let styleClass = issue.unread_fields.indexOf(key) >= 0 ? 'ri-popup-status-menu-item-new' : 'popup-status-menu-item';
-            if(key == 'done_ratio' && (issue.done_ratio || issue.done_ratio==0)) {
-                this._addStatusLabel(item, 'done_ratio', issue.done_ratio + '%', styleClass);
-            } else if(issue[key]) {
-                this._addStatusLabel(item, key, issue[key].name, styleClass);
-            }
-        }));
-    },
-
     _addIssueMenuItem : function(issue){
         this._debug('Add issue menu item... #' + issue.id);
-        let item = new PopupMenu.PopupBaseMenuItem();
-        item.issueId = issue.id;
-
-        item.statusLabels = {};
-        item.issueLabel = new St.Label({text: '#' + issue.id + ' - ' + issue.subject});
-        item.issueLabel.style = 'max-width:' + this._settings.get_int('max-subject-width') + 'px';
-        let unread = issue.unread_fields.length > 0;
-        if(unread)
-            item.issueLabel.add_style_class_name('ri-issue-label-unread');
-        item.actor.add(item.issueLabel,{x_fill: true, expand: true});
-
-        item.statusLabelsBox = new St.BoxLayout({style_class: 'ri-popup-menu-item-status-labels'});
-        item.actor.add(item.statusLabelsBox);
-        this._addStatusLabels(item);
-
-        item.buttonBox = new St.BoxLayout();
-        item.actor.add(item.buttonBox);
-
-        item.buttonBox.markReadButton = new St.Button({
-            child: new St.Icon({icon_name: 'object-select-symbolic', style_class: 'system-status-icon'})
-        });
-        item.buttonBox.markReadButton.connect('clicked', Lang.bind(this, function(){
+        let item = new IssueItem.IssueItem(issue);
+        item.markReadButton.connect('clicked', Lang.bind(this, function(){
             this._issuesStorage.updateIssueToRead(item.issueId);
             this._makeMenuItemRead(item);
             this._issuesStorage.save();
         }));
-
-        if(unread)
-          this._showMarkReadButton(item);
-
-        let removeIssueButton = new St.Button({
-            child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
-        });
-        removeIssueButton.connect('clicked', Lang.bind(this, function(){
+        item.removeIssueButton.connect('clicked', Lang.bind(this, function(){
             this._removeIssueClicked(issue);
         }));
-        item.buttonBox.add(removeIssueButton);
-
-        item.connect('activate', Lang.bind(this, this._issueItemAtivated));
+        item.menuItem.connect('activate', Lang.bind(this, function(){
+            this._issueItemAtivated(item);
+        }));
 
         let groupByKey = this._settings.get_string('group-by');
 
@@ -500,16 +431,9 @@ const RedmineIssues = new Lang.Class({
             this.menu.addMenuItem(issueItem, 0);
         }
         this._issueItems[groupId][issue.id] = item;
-        issueItem.menu.addMenuItem(item);
+        issueItem.menu.addMenuItem(item.menuItem);
         this._refreshGroupStyleClass(groupId);
         this._debug('Finish add issue menu item #' + issue.id);
-    },
-
-    _showMarkReadButton : function(item){
-        if(item.buttonBox.isMarkReadButtonShown)
-            return;
-        item.buttonBox.insert_child_at_index(item.buttonBox.markReadButton, 0);
-        item.buttonBox.isMarkReadButtonShown = true;
     },
 
     _refreshGroupStyleClass : function(groupId){
@@ -527,12 +451,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _makeMenuItemRead : function(item){
-        this._makeLabelsRead(item);
-        item.issueLabel.remove_style_class_name('ri-issue-label-unread');
-        if(item.buttonBox.isMarkReadButtonShown) {
-            item.buttonBox.remove_child(item.buttonBox.markReadButton);
-            item.buttonBox.isMarkReadButtonShown = false;
-        }
+        item.makeRead();
         let issue = this._issuesStorage.issues[item.issueId];
         let groupByKey = this._settings.get_string('group-by');
         let groupId = issue[groupByKey] ? issue[groupByKey].id : -1;

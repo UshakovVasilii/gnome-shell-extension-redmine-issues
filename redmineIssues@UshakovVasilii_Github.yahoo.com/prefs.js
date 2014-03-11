@@ -28,22 +28,26 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         // General tab
         let generalTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
         this.append_page(generalTab,  new Gtk.Label({label: _('General')}));
-        
-        generalTab.attach(new Gtk.Label({ label: _('Redmine URL'), halign : Gtk.Align.END}), 0, 0, 1, 1);
+
+        let apiAccessKeyHelp = _('More information about authentication:') +
+            ' <a href="http://www.redmine.org/projects/redmine/wiki/Rest_api#Authentication">Authentication</a>';
+        generalTab.attach(new Gtk.Label({label : apiAccessKeyHelp, use_markup : true, halign : Gtk.Align.START}), 0, 0, 2, 1);
+
+        generalTab.attach(new Gtk.Label({ label: _('Redmine URL'), halign : Gtk.Align.END}), 0, 1, 1, 1);
         let redmineURL = new Gtk.Entry({ hexpand: true });
-        generalTab.attach(redmineURL, 1, 0, 1, 1);
+        generalTab.attach(redmineURL, 1, 1, 1, 1);
         this._settings.bind('redmine-url', redmineURL, 'text', Gio.SettingsBindFlags.DEFAULT);
         redmineURL.connect('changed', Lang.bind(this, this._refreshCurlHelp));
 
-        generalTab.attach(new Gtk.Label({ label: _('API access key'), halign : Gtk.Align.END}), 0, 1, 1, 1);
+        generalTab.attach(new Gtk.Label({ label: _('API access key'), halign : Gtk.Align.END}), 0, 2, 1, 1);
         let apiAccessKey = new Gtk.Entry({ hexpand: true });
-        generalTab.attach(apiAccessKey, 1, 1, 1, 1);
+        generalTab.attach(apiAccessKey, 1, 2, 1, 1);
         this._settings.bind('api-access-key', apiAccessKey, 'text', Gio.SettingsBindFlags.DEFAULT);
         apiAccessKey.connect('changed', Lang.bind(this, this._refreshCurlHelp));
 
-        generalTab.attach(new Gtk.Label({ label: _('Auto refresh (min)'), halign : Gtk.Align.END}), 0, 2, 1, 1);
+        generalTab.attach(new Gtk.Label({ label: _('Auto refresh (min)'), halign : Gtk.Align.END}), 0, 3, 1, 1);
         let autoRefresh = Gtk.SpinButton.new_with_range (0, 60, 1);
-        generalTab.attach(autoRefresh, 1, 2, 1, 1);
+        generalTab.attach(autoRefresh, 1, 3, 1, 1);
         this._settings.bind('auto-refresh', autoRefresh, 'value', Gio.SettingsBindFlags.DEFAULT);
         
         // Display tab

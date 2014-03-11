@@ -1,4 +1,5 @@
 #!/bin/sh
 
-rm -rf ~/.local/share/gnome-shell/extensions/redmineIssues@UshakovVasilii_Github.yahoo.com
-cp -r redmineIssues@UshakovVasilii_Github.yahoo.com ~/.local/share/gnome-shell/extensions/.
+NAME=redmineIssues@UshakovVasilii_Github.yahoo.com
+rm -rf ~/.local/share/gnome-shell/extensions/$NAME
+cp -r $NAME ~/.local/share/gnome-shell/extensions/.

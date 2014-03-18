@@ -488,7 +488,14 @@ const RedmineIssues = new Lang.Class({
             this.menu.addMenuItem(issueItem, 0);
         }
         this._issueItems[groupId][issue.id] = item;
-        issueItem.menu.addMenuItem(item.menuItem);
+
+        let issueIds = [];
+        for(let i in this._issueItems[groupId]){
+            issueIds.push(this._issueItems[groupId][i].issueId);
+        }
+        issueIds.sort();
+
+        issueItem.menu.addMenuItem(item.menuItem, issueIds.indexOf(item.issueId));
         this._refreshGroupStyleClass(groupId);
         this._debug('Finish add issue menu item #' + issue.id);
     },

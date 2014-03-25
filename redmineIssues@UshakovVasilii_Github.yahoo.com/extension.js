@@ -485,7 +485,14 @@ const RedmineIssues = new Lang.Class({
             issueItem = new PopupMenu.PopupSubMenuMenuItem(groupId == -1 ? _('Ungrouped') : issue[groupByKey].name);
             this._issueGroupItems[groupId] = issueItem;
             this._issueItems[groupId] = {};
-            this.menu.addMenuItem(issueItem, 0);
+
+            let groupNames = [];
+            for(let i in this._issueGroupItems){
+                groupNames.push(this._issueGroupItems[i].label.text);
+            }
+            groupNames.sort();
+
+            this.menu.addMenuItem(issueItem, groupNames.indexOf(issueItem.label.text));
         }
         this._issueItems[groupId][issue.id] = item;
 

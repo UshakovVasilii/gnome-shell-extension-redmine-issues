@@ -551,12 +551,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _openAppPreferences : function(){
-        let prefs = Shell.AppSystem.get_default().lookup_app('gnome-shell-extension-prefs.desktop');
-        if(prefs.get_state() == prefs.SHELL_APP_STATE_RUNNING){
-            prefs.activate();
-        } else {
-            prefs.launch(global.display.get_current_time_roundtrip(), [Me.metadata.uuid],-1,null);
-        }
+        Util.spawn(["gnome-shell-extension-prefs", "redmineIssues@UshakovVasilii_Github.yahoo.com"]);
         this.menu.close();
     },
 

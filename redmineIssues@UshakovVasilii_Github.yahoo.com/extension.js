@@ -7,7 +7,6 @@ const Soup = imports.gi.Soup;
 const Util = imports.misc.util;
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
-const Shell = imports.gi.Shell;
 
 const session = new Soup.SessionAsync();
 Soup.Session.prototype.add_feature.call(session, new Soup.ProxyResolverDefault());

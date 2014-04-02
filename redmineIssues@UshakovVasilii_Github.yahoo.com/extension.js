@@ -3,6 +3,7 @@ const St = imports.gi.St;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const Main = imports.ui.main;
+const MessageTray = imports.ui.messageTray;
 const Soup = imports.gi.Soup;
 const Util = imports.misc.util;
 const Lang = imports.lang;
@@ -26,12 +27,27 @@ const IssueItem = Me.imports.issueItem;
 
 let redmineIssues = null;
 
+const RISource = new Lang.Class({
+    Name: 'RISource',
+    Extends: MessageTray.Source,
+
+    createIcon: function(size) {
+        return new St.Icon({
+            gicon: Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-symbolic.svg'),
+            icon_size: size
+        });
+    },
+
+});
+
 const RedmineIssues = new Lang.Class({
     Name: 'RedmineIssuesMenuItem',
     Extends: PanelMenu.Button,
 
     _init: function() {
         this.parent(St.Align.START);
+
+        this._source = new RISource(_('Redmine Issues'), 'dialog-information-symbolic');
 
         this._settings = Convenience.getSettings();
 
@@ -219,6 +235,7 @@ const RedmineIssues = new Lang.Class({
 
     _onDestroy : function(){
         this._debug('Destroy');
+        this._source.destroy();
         let settings = this._settings;
         this._settingChangedSignals.forEach(function(signal){
             settings.disconnect(signal);
@@ -317,7 +334,7 @@ const RedmineIssues = new Lang.Class({
                     this._debug('issues is empty');
                 }
             } else if(response.status_code && response.status_code >= 100) {
-                Main.notify(_('Cannot load filter "%s", error status_code=%s').format(filter, response.status_code));
+                this._notify(_('Warning'), _('Cannot load filter "%s", error status_code=%s').format(filter, response.status_code));
             }
   
             this._continueOrFinishIssuesLoading(filter);
@@ -362,10 +379,18 @@ const RedmineIssues = new Lang.Class({
                 let issue=JSON.parse(response.response_body.data).issue;
                 callback(this._convertIssueFromResponse(issue));
             } else if(response.status_code && response.status_code >= 100) {
-                Main.notify(_('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
+                this._notify(_('Warning'), _('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
             }
             this._continueOrFinishIssueLoading(id);
         }));
+    },
+
+    _notify : function(message, details){
+        if(!Main.messageTray.contains(this._source))
+            Main.messageTray.add(this._source);
+        let notification = new MessageTray.Notification(this._source, message, details);
+        notification.setTransient(true);
+        this._source.notify(notification);
     },
 
     _continueOrFinishIssueLoading : function(id){

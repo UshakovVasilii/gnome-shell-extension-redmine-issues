@@ -47,7 +47,7 @@ const RedmineIssues = new Lang.Class({
     _init: function() {
         this.parent(St.Align.START);
 
-        this._source = new RISource(_('Redmine Issues'), 'dialog-information-symbolic');
+        this._source = new RISource(_('Redmine Issues'));
 
         this._settings = Convenience.getSettings();
 

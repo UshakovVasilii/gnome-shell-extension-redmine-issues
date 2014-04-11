@@ -51,10 +51,14 @@ const RedmineIssues = new Lang.Class({
 
         this._settings = Convenience.getSettings();
 
-        this.actor.add_actor(new St.Icon({
-            gicon: Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-symbolic.svg'),
+        this._gicon_read = Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-symbolic.svg');
+        this._gicon_unread = Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-unread-symbolic.svg');
+        this._extensionIcon = new St.Icon({
+            gicon: this._gicon_read,
             style_class: 'system-status-icon'
-        }));
+        });
+
+        this.actor.add_actor(this._extensionIcon);
 
         this._debugEnabled = this._settings.get_boolean('logs');
         this._issuesStorage = new IssueStorage.IssueStorage();
@@ -539,10 +543,19 @@ const RedmineIssues = new Lang.Class({
                 break;
             }
         }
-        if(unread)
+        if(unread) {
             this._issueGroupItems[groupId].actor.add_style_class_name('ri-group-label-unread');
-        else
+            this._extensionIcon.gicon = this._gicon_unread;
+        } else {
             this._issueGroupItems[groupId].actor.remove_style_class_name('ri-group-label-unread');
+            for(let issueId in this._issuesStorage.issues){
+                if(this._issuesStorage.issues[issueId].unread_fields.length > 0){
+                    unread = true;
+                    break;
+                }
+            }
+            this._extensionIcon.gicon = unread ? this._gicon_unread : this._gicon_read;
+        }
     },
 
     _makeMenuItemRead : function(item){

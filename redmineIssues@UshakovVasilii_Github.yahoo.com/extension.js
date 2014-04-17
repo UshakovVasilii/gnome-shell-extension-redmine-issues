@@ -392,9 +392,7 @@ const RedmineIssues = new Lang.Class({
     _notify : function(message, details){
         if(!Main.messageTray.contains(this._source))
             Main.messageTray.add(this._source);
-        let notification = new MessageTray.Notification(this._source, message, details);
-        notification.setTransient(true);
-        this._source.notify(notification);
+        this._source.notify(new MessageTray.Notification(this._source, message, details));
     },
 
     _continueOrFinishIssueLoading : function(id){

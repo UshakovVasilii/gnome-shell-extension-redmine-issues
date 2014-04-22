@@ -28,6 +28,15 @@ const IssueStorage = new Lang.Class({
         let data = Shell.get_file_contents_utf8_sync(issuesFile.get_path());
         if(data){
             this.issues = JSON.parse(data);
+
+            for(let i in this.issues) {
+                if(this.issues[i].ri_bookmark==undefined){
+                    this.issues[i].ri_bookmark=true;
+                    this._hasChanges=true;
+                }
+            }
+            this.save();
+
         } else {
             this.issues = {};
         }

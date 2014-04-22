@@ -298,6 +298,8 @@ const RedmineIssues = new Lang.Class({
     },
 
     _addOrRefreshIssue : function(issue){
+        if(!issue.ri_bookmark)
+            issue.ri_bookmark=false;
         if(this._issuesStorage.addIssue(issue)) {
             this._addIssueMenuItem(issue);
         } else {
@@ -449,6 +451,7 @@ const RedmineIssues = new Lang.Class({
             if(!issueId)
                 return;
             this._loadIssue(issueId, Lang.bind(this, function(issue) {
+                issue.ri_bookmark=true;
                 if(this._issuesStorage.addIssue(issue)) {
                     this._addIssueMenuItem(issue);
                     this._issuesStorage.save();
@@ -501,6 +504,13 @@ const RedmineIssues = new Lang.Class({
         }));
         item.menuItem.connect('activate', Lang.bind(this, function(){
             this._issueItemAtivated(item);
+        }));
+        item.bookmarkButton.connect('clicked', Lang.bind(this, function(){
+            let i = this._issuesStorage.issues[item.issueId];
+            i.ri_bookmark = !i.ri_bookmark;
+            this._issuesStorage.updateIssue(i);
+            this._issuesStorage.save();
+            item.refreshBookmarkButton(i.ri_bookmark);
         }));
 
         let groupByKey = this._settings.get_string('group-by');

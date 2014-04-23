@@ -65,25 +65,23 @@ const IssueStorage = new Lang.Class({
             return;
         }
         this._debug('Saving...');
-
-        let file = Gio.file_new_for_path(this._issuesPath);
-        let out = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
-        Shell.write_string_to_stream(out, JSON.stringify(this.issues, null, '\t'));
-        out.close(null);
+        this._saveFile(this._issuesPath, this.issues);
 
         if(this._hasIgnoreChanges){
             this._debug('Saving ignore file...');
-
-            let ignoreFile = Gio.file_new_for_path(this._issuesIgnorePath);
-            let ignoreOut = ignoreFile.replace(null, false, Gio.FileCreateFlags.NONE, null);
-            Shell.write_string_to_stream(ignoreOut, JSON.stringify(this.issuesIgnore, null, '\t'));
-            ignoreOut.close(null);
-
+            this._saveFile(this._issuesIgnorePath, this.issuesIgnore);
             this._hasIgnoreChanges=false;
         }
 
         this._hasChanges = false;
         this._debug('Issues saved');
+    },
+
+    _saveFile : function(path, data){
+        let file = Gio.file_new_for_path(path);
+        let out = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
+        Shell.write_string_to_stream(out, JSON.stringify(data, null, '\t'));
+        out.close(null);
     },
 
     updateIssue : function(issue){

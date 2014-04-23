@@ -486,11 +486,14 @@ const RedmineIssues = new Lang.Class({
     },
 
     _removeIssueClicked : function(issue){
+        let message = issue.ri_bookmark ? 
+            _('Are you sure you want to delete "%s"?').format(issue.subject) :
+            _('Are you sure you want to delete "%s"?\nIssue will be added to ignore list').format(issue.subject)
         let confirmDialog = new ConfirmDialog.ConfirmDialog(
             _('Delete #%s').format(issue.id),
-            _('Are you sure you want to delete "%s"?\nIssue will be added to ignore list').format(issue.subject),
+            message,
             Lang.bind(this, function() {
-                this._issuesStorage.removeIssue(issue.id, true);
+                this._issuesStorage.removeIssue(issue.id, !issue.ri_bookmark);
                 this._removeIssueMenuItem(issue);
                 this._issuesStorage.save();
             })

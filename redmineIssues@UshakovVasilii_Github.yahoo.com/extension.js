@@ -260,9 +260,15 @@ const RedmineIssues = new Lang.Class({
     _refresh : function() {
         this._refreshing = true;
 
-        this._issuesForCheck = [];
+        this._bookmarkIssuesForCheck = [];
+        this._unbookmarkIssuesForCheck = [];
+
         for(let i in this._issuesStorage.issues){
-            this._issuesForCheck.push(parseInt(i, 10));
+            if(this._issuesStorage.issues[i].ri_bookmark){
+                this._bookmarkIssuesForCheck.push(parseInt(i, 10));
+            } else {
+                this._unbookmarkIssuesForCheck.push(parseInt(i, 10));
+            }
         }
 
         if(this._reloading) {
@@ -287,11 +293,11 @@ const RedmineIssues = new Lang.Class({
                 this._loadIssues(filter, Lang.bind(this, this._addOrRefreshIssue));
             }));
         } else {
-            if(this._issuesForCheck.length==0) {
+            if(this._bookmarkIssuesForCheck.length==0) {
                 this._finishRefresh();
             } else {
-                for(let i in this._issuesForCheck){
-                    this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
+                for(let i in this._bookmarkIssuesForCheck){
+                    this._loadIssue(this._bookmarkIssuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
                 }
             }
         }
@@ -330,10 +336,16 @@ const RedmineIssues = new Lang.Class({
                     for(let i in issues){
                         let issue = issues[i];
                         let issueId = parseInt(issue.id, 10);
-                        let issueIndex = this._issuesForCheck.indexOf(issueId);
+
+                        let issueIndex = this._unbookmarkIssuesForCheck.indexOf(issueId);
                         if (issueIndex > -1) {
-                            this._issuesForCheck.splice(issueIndex, 1);
+                            this._unbookmarkIssuesForCheck.splice(issueIndex, 1);
                         }
+                        issueIndex = this._bookmarkIssuesForCheck.indexOf(issueId);
+                        if (issueIndex > -1) {
+                            this._bookmarkIssuesForCheck.splice(issueIndex, 1);
+                        }
+
                         callback(this._convertIssueFromResponse(issue));
                     }
                 } else {
@@ -353,11 +365,11 @@ const RedmineIssues = new Lang.Class({
             this._filtersForCheck.splice(filterIndex, 1);
         }
   
-        if(this._issuesForCheck.length == 0){
+        if(this._bookmarkIssuesForCheck.length == 0 && this._filtersForCheck.length == 0){
             this._finishRefresh();
         } else if(this._filtersForCheck.length == 0){
-            for(let i in this._issuesForCheck){
-               this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
+            for(let i in this._bookmarkIssuesForCheck){
+               this._loadIssue(this._bookmarkIssuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
            }
         }
     },
@@ -398,11 +410,11 @@ const RedmineIssues = new Lang.Class({
     },
 
     _continueOrFinishIssueLoading : function(id){
-        if(this._issuesForCheck){
-            let index = this._issuesForCheck.indexOf(id);
+        if(this._bookmarkIssuesForCheck){
+            let index = this._bookmarkIssuesForCheck.indexOf(id);
             if (index > -1) {
-                this._issuesForCheck.splice(index, 1);
-                if(this._refreshing && this._issuesForCheck.length == 0){
+                this._bookmarkIssuesForCheck.splice(index, 1);
+                if(this._refreshing && this._bookmarkIssuesForCheck.length == 0){
                     this._finishRefresh();
                 }
             }
@@ -411,6 +423,15 @@ const RedmineIssues = new Lang.Class({
 
     _finishRefresh : function(){
         this._refreshing = false;
+
+        this._unbookmarkIssuesForCheck.forEach(Lang.bind(this, function(issueId){
+            this._debug('Delete unbookmark issue #' + issueId + '...');
+            let issue = this._issuesStorage.issues[issueId];
+            this._issuesStorage.removeIssue(issue.id);
+            this._removeIssueMenuItem(issue);
+            this._issuesStorage.save();
+        }));
+
         this._issuesStorage.save();
         if(this._reloading){
             this.commands.reloadButton.child.icon_name='emblem-synchronizing-symbolic';

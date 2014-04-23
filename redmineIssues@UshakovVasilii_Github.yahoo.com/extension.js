@@ -186,7 +186,7 @@ const RedmineIssues = new Lang.Class({
         this.commands.refreshButton.connect('clicked', Lang.bind(this, this._refreshButtonClicked));
         this.commands.removeAllButton.connect('clicked', Lang.bind(this, this._removeAllClicked));
         this.commands.markAllReadButton.connect('clicked', Lang.bind(this, this._markAllReadClicked));
-        this.commands.reloadButton.connect('clicked', Lang.bind(this, this._reloadIssues));
+        this.commands.cleanIgnoreListButton.connect('clicked', Lang.bind(this, this._cleanIgnoreListClicked));
 
         this.menu.addMenuItem(this.commands.commandMenuItem);
     },
@@ -198,12 +198,16 @@ const RedmineIssues = new Lang.Class({
         this._refresh();
     },
 
-    _reloadIssues : function(){
-        if(this._refreshing || !this._isMainPrefsValid){
-            return;
-        }
-        this._reloading = true;
-        this._refresh();
+    _cleanIgnoreListClicked : function(){
+        let confirmDialog = new ConfirmDialog.ConfirmDialog(
+            _('Clean ignore list'),
+            _('Are you sure you want to remove all issues from ignore list?'),
+            Lang.bind(this, function() {
+                this._issuesStorage.cleanIgnoreList();
+            })
+        );
+        this.menu.close();
+        confirmDialog.open();
     },
 
     _removeAllIssues : function(){
@@ -271,11 +275,7 @@ const RedmineIssues = new Lang.Class({
             }
         }
 
-        if(this._reloading) {
-            this.commands.reloadButton.child.icon_name='content-loading-symbolic';
-            this._removeAllIssues();
-        } else
-            this.commands.refreshButton.child.icon_name ='content-loading-symbolic';
+        this.commands.refreshButton.child.icon_name ='content-loading-symbolic';
 
         let filters = []
         let srcFilters = this._settings.get_strv('filters');
@@ -433,11 +433,7 @@ const RedmineIssues = new Lang.Class({
         }));
 
         this._issuesStorage.save();
-        if(this._reloading){
-            this.commands.reloadButton.child.icon_name='emblem-synchronizing-symbolic';
-            this._reloading = false;
-        } else
-            this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
+        this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
     },
 
     _refreshIssueMenuItem : function(newIssue) {

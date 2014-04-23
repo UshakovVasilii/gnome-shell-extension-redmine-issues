@@ -77,6 +77,12 @@ const IssueStorage = new Lang.Class({
         this._debug('Issues saved');
     },
 
+    cleanIgnoreList : function(){
+        this._debug('Clean ignore list...');
+        this.issuesIgnore = [];
+        this._saveFile(this._issuesIgnorePath, this.issuesIgnore);
+    },
+
     _saveFile : function(path, data){
         let file = Gio.file_new_for_path(path);
         let out = file.replace(null, false, Gio.FileCreateFlags.NONE, null);

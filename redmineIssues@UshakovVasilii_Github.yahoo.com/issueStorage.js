@@ -17,17 +17,20 @@ const IssueStorage = new Lang.Class({
             GLib.mkdir_with_parents(path, 493);
 
         this._issuesPath = GLib.build_filenamev([path, 'issues.json']);
+        this._issuesIgnorePath = GLib.build_filenamev([path, 'issues-ignore.json']);
         if(!GLib.file_test(this._issuesPath, GLib.FileTest.EXISTS))
             GLib.file_set_contents(this._issuesPath, '');
+        if(!GLib.file_test(this._issuesIgnorePath, GLib.FileTest.EXISTS))
+            GLib.file_set_contents(this._issuesIgnorePath, '');
 
-        this._loadIssues();
+        this._load();
     },
 
-    _loadIssues : function(){
+    _load : function(){
         let issuesFile = Gio.file_new_for_path(this._issuesPath);
-        let data = Shell.get_file_contents_utf8_sync(issuesFile.get_path());
-        if(data){
-            this.issues = JSON.parse(data);
+        let issuesData = Shell.get_file_contents_utf8_sync(issuesFile.get_path());
+        if(issuesData){
+            this.issues = JSON.parse(issuesData);
 
             for(let i in this.issues) {
                 if(this.issues[i].ri_bookmark==undefined){
@@ -39,6 +42,15 @@ const IssueStorage = new Lang.Class({
 
         } else {
             this.issues = {};
+        }
+
+        let issuesIgnoreFile = Gio.file_new_for_path(this._issuesIgnorePath);
+        let issuesIgnoreData = Shell.get_file_contents_utf8_sync(issuesIgnoreFile.get_path());
+
+        if(issuesIgnoreData){
+            this.issuesIgnore = JSON.parse(issuesIgnoreData);
+        } else {
+            this.issuesIgnore = [];
         }
     },
 
@@ -53,10 +65,23 @@ const IssueStorage = new Lang.Class({
             return;
         }
         this._debug('Saving...');
+
         let file = Gio.file_new_for_path(this._issuesPath);
         let out = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
         Shell.write_string_to_stream(out, JSON.stringify(this.issues, null, '\t'));
         out.close(null);
+
+        if(this._hasIgnoreChanges){
+            this._debug('Saving ignore file...');
+
+            let ignoreFile = Gio.file_new_for_path(this._issuesIgnorePath);
+            let ignoreOut = ignoreFile.replace(null, false, Gio.FileCreateFlags.NONE, null);
+            Shell.write_string_to_stream(ignoreOut, JSON.stringify(this.issuesIgnore, null, '\t'));
+            ignoreOut.close(null);
+
+            this._hasIgnoreChanges=false;
+        }
+
         this._hasChanges = false;
         this._debug('Issues saved');
     },
@@ -77,9 +102,21 @@ const IssueStorage = new Lang.Class({
         return this.updateIssue(issue);
     },
 
-    addIssue : function(issue){
+    addIssue : function(issue, force){
         if(this.issues[issue.id])
             return false;
+
+        if(force){
+            let i = this.issuesIgnore.indexOf(issue.id);
+            if (i > -1) {
+                this.issuesIgnore.splice(i, 1);
+                this._hasIgnoreChanges = true;
+            }
+        } else if(this.issuesIgnore.indexOf(issue.id) > -1){
+            this._debug('#' + issue.id + ' ignored');
+            return false;
+        }
+
         issue.unread_fields = ['subject'];
         Сonstants.LABEL_KEYS.forEach(function(key){
             let value = issue[key];
@@ -92,8 +129,15 @@ const IssueStorage = new Lang.Class({
         return true;
     },
 
-    removeIssue : function(issueId) {
-        let data = [];
+    removeIssue : function(issueId, force) {
+        if(force){
+            let i = this.issuesIgnore.indexOf(issueId);
+            if (i < 0) {
+                this._debug('Add #' + issueId + ' to ignore list');
+                this.issuesIgnore.push(issueId);
+                this._hasIgnoreChanges = true;
+            }
+        }
         delete this.issues[issueId];
         this._hasChanges = true;
         return true;

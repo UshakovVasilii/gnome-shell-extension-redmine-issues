@@ -442,6 +442,8 @@ const RedmineIssues = new Lang.Class({
 
     _refreshIssueMenuItem : function(newIssue) {
         let oldIssue = this._issuesStorage.issues[newIssue.id];
+        if(!oldIssue) // for ignored issue
+            return;
         if(!this._issuesStorage.updateIssueUnreadFields(newIssue))
             return;
         let groupByKey = this._settings.get_string('group-by');
@@ -473,7 +475,7 @@ const RedmineIssues = new Lang.Class({
                 return;
             this._loadIssue(issueId, Lang.bind(this, function(issue) {
                 issue.ri_bookmark=true;
-                if(this._issuesStorage.addIssue(issue)) {
+                if(this._issuesStorage.addIssue(issue, true)) {
                     this._addIssueMenuItem(issue);
                     this._issuesStorage.save();
                 }
@@ -486,9 +488,9 @@ const RedmineIssues = new Lang.Class({
     _removeIssueClicked : function(issue){
         let confirmDialog = new ConfirmDialog.ConfirmDialog(
             _('Delete #%s').format(issue.id),
-            _('Are you sure you want to delete "%s"?').format(issue.subject),
+            _('Are you sure you want to delete "%s"?\nIssue will be added to ignore list').format(issue.subject),
             Lang.bind(this, function() {
-                this._issuesStorage.removeIssue(issue.id);
+                this._issuesStorage.removeIssue(issue.id, true);
                 this._removeIssueMenuItem(issue);
                 this._issuesStorage.save();
             })

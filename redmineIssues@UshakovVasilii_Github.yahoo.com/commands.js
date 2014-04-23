@@ -21,8 +21,8 @@ const Commands = new Lang.Class({
         this._addSwitcher(this.markAllReadButton, this.removeAllButton);
 
         this.refreshButton = this._createButton('view-refresh-symbolic');
-        this.reloadButton = this._createButton('emblem-synchronizing-symbolic');
-        this._addSwitcher(this.refreshButton, this.reloadButton);
+        this.cleanIgnoreListButton = this._createButton('action-unavailable-symbolic');
+        this._addSwitcher(this.refreshButton, this.cleanIgnoreListButton);
 
         this._makeVisible();
     },
@@ -37,7 +37,7 @@ const Commands = new Lang.Class({
         this.markAllReadButton.visible = true;
         this.removeAllButton.visible = true;
         this.refreshButton.visible = true;
-        this.reloadButton.visible = true;
+        this.cleanIgnoreListButton.visible = true;
     },
 
     setMinWidth : function(width){

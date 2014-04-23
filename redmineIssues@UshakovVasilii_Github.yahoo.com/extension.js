@@ -186,7 +186,7 @@ const RedmineIssues = new Lang.Class({
         this.commands.refreshButton.connect('clicked', Lang.bind(this, this._refreshButtonClicked));
         this.commands.removeAllButton.connect('clicked', Lang.bind(this, this._removeAllClicked));
         this.commands.markAllReadButton.connect('clicked', Lang.bind(this, this._markAllReadClicked));
-        this.commands.reloadButton.connect('clicked', Lang.bind(this, this._reloadIssues));
+        this.commands.cleanIgnoreListButton.connect('clicked', Lang.bind(this, this._cleanIgnoreListClicked));
 
         this.menu.addMenuItem(this.commands.commandMenuItem);
     },
@@ -198,12 +198,16 @@ const RedmineIssues = new Lang.Class({
         this._refresh();
     },
 
-    _reloadIssues : function(){
-        if(this._refreshing || !this._isMainPrefsValid){
-            return;
-        }
-        this._reloading = true;
-        this._refresh();
+    _cleanIgnoreListClicked : function(){
+        let confirmDialog = new ConfirmDialog.ConfirmDialog(
+            _('Clean ignore list'),
+            _('Are you sure you want to remove all issues from ignore list?'),
+            Lang.bind(this, function() {
+                this._issuesStorage.cleanIgnoreList();
+            })
+        );
+        this.menu.close();
+        confirmDialog.open();
     },
 
     _removeAllIssues : function(){
@@ -260,16 +264,18 @@ const RedmineIssues = new Lang.Class({
     _refresh : function() {
         this._refreshing = true;
 
-        this._issuesForCheck = [];
+        this._bookmarkIssuesForCheck = [];
+        this._unbookmarkIssuesForCheck = [];
+
         for(let i in this._issuesStorage.issues){
-            this._issuesForCheck.push(parseInt(i, 10));
+            if(this._issuesStorage.issues[i].ri_bookmark){
+                this._bookmarkIssuesForCheck.push(parseInt(i, 10));
+            } else {
+                this._unbookmarkIssuesForCheck.push(parseInt(i, 10));
+            }
         }
 
-        if(this._reloading) {
-            this.commands.reloadButton.child.icon_name='content-loading-symbolic';
-            this._removeAllIssues();
-        } else
-            this.commands.refreshButton.child.icon_name ='content-loading-symbolic';
+        this.commands.refreshButton.child.icon_name ='content-loading-symbolic';
 
         let filters = []
         let srcFilters = this._settings.get_strv('filters');
@@ -287,17 +293,19 @@ const RedmineIssues = new Lang.Class({
                 this._loadIssues(filter, Lang.bind(this, this._addOrRefreshIssue));
             }));
         } else {
-            if(this._issuesForCheck.length==0) {
+            if(this._bookmarkIssuesForCheck.length==0) {
                 this._finishRefresh();
             } else {
-                for(let i in this._issuesForCheck){
-                    this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
+                for(let i in this._bookmarkIssuesForCheck){
+                    this._loadIssue(this._bookmarkIssuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
                 }
             }
         }
     },
 
     _addOrRefreshIssue : function(issue){
+        if(!issue.ri_bookmark)
+            issue.ri_bookmark=false;
         if(this._issuesStorage.addIssue(issue)) {
             this._addIssueMenuItem(issue);
         } else {
@@ -328,10 +336,16 @@ const RedmineIssues = new Lang.Class({
                     for(let i in issues){
                         let issue = issues[i];
                         let issueId = parseInt(issue.id, 10);
-                        let issueIndex = this._issuesForCheck.indexOf(issueId);
+
+                        let issueIndex = this._unbookmarkIssuesForCheck.indexOf(issueId);
                         if (issueIndex > -1) {
-                            this._issuesForCheck.splice(issueIndex, 1);
+                            this._unbookmarkIssuesForCheck.splice(issueIndex, 1);
                         }
+                        issueIndex = this._bookmarkIssuesForCheck.indexOf(issueId);
+                        if (issueIndex > -1) {
+                            this._bookmarkIssuesForCheck.splice(issueIndex, 1);
+                        }
+
                         callback(this._convertIssueFromResponse(issue));
                     }
                 } else {
@@ -351,11 +365,11 @@ const RedmineIssues = new Lang.Class({
             this._filtersForCheck.splice(filterIndex, 1);
         }
   
-        if(this._issuesForCheck.length == 0){
+        if(this._bookmarkIssuesForCheck.length == 0 && this._filtersForCheck.length == 0){
             this._finishRefresh();
         } else if(this._filtersForCheck.length == 0){
-            for(let i in this._issuesForCheck){
-               this._loadIssue(this._issuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
+            for(let i in this._bookmarkIssuesForCheck){
+               this._loadIssue(this._bookmarkIssuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
            }
         }
     },
@@ -396,11 +410,11 @@ const RedmineIssues = new Lang.Class({
     },
 
     _continueOrFinishIssueLoading : function(id){
-        if(this._issuesForCheck){
-            let index = this._issuesForCheck.indexOf(id);
+        if(this._bookmarkIssuesForCheck){
+            let index = this._bookmarkIssuesForCheck.indexOf(id);
             if (index > -1) {
-                this._issuesForCheck.splice(index, 1);
-                if(this._refreshing && this._issuesForCheck.length == 0){
+                this._bookmarkIssuesForCheck.splice(index, 1);
+                if(this._refreshing && this._bookmarkIssuesForCheck.length == 0){
                     this._finishRefresh();
                 }
             }
@@ -409,16 +423,23 @@ const RedmineIssues = new Lang.Class({
 
     _finishRefresh : function(){
         this._refreshing = false;
+
+        this._unbookmarkIssuesForCheck.forEach(Lang.bind(this, function(issueId){
+            this._debug('Delete unbookmark issue #' + issueId + '...');
+            let issue = this._issuesStorage.issues[issueId];
+            this._issuesStorage.removeIssue(issue.id);
+            this._removeIssueMenuItem(issue);
+            this._issuesStorage.save();
+        }));
+
         this._issuesStorage.save();
-        if(this._reloading){
-            this.commands.reloadButton.child.icon_name='emblem-synchronizing-symbolic';
-            this._reloading = false;
-        } else
-            this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
+        this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
     },
 
     _refreshIssueMenuItem : function(newIssue) {
         let oldIssue = this._issuesStorage.issues[newIssue.id];
+        if(!oldIssue) // for ignored issue
+            return;
         if(!this._issuesStorage.updateIssueUnreadFields(newIssue))
             return;
         let groupByKey = this._settings.get_string('group-by');
@@ -449,7 +470,8 @@ const RedmineIssues = new Lang.Class({
             if(!issueId)
                 return;
             this._loadIssue(issueId, Lang.bind(this, function(issue) {
-                if(this._issuesStorage.addIssue(issue)) {
+                issue.ri_bookmark=true;
+                if(this._issuesStorage.addIssue(issue, true)) {
                     this._addIssueMenuItem(issue);
                     this._issuesStorage.save();
                 }
@@ -460,11 +482,14 @@ const RedmineIssues = new Lang.Class({
     },
 
     _removeIssueClicked : function(issue){
+        let message = issue.ri_bookmark ? 
+            _('Are you sure you want to delete "%s"?').format(issue.subject) :
+            _('Are you sure you want to delete "%s"?\nIssue will be added to ignore list').format(issue.subject)
         let confirmDialog = new ConfirmDialog.ConfirmDialog(
             _('Delete #%s').format(issue.id),
-            _('Are you sure you want to delete "%s"?').format(issue.subject),
+            message,
             Lang.bind(this, function() {
-                this._issuesStorage.removeIssue(issue.id);
+                this._issuesStorage.removeIssue(issue.id, !issue.ri_bookmark);
                 this._removeIssueMenuItem(issue);
                 this._issuesStorage.save();
             })
@@ -501,6 +526,13 @@ const RedmineIssues = new Lang.Class({
         }));
         item.menuItem.connect('activate', Lang.bind(this, function(){
             this._issueItemAtivated(item);
+        }));
+        item.bookmarkButton.connect('clicked', Lang.bind(this, function(){
+            let i = this._issuesStorage.issues[item.issueId];
+            i.ri_bookmark = !i.ri_bookmark;
+            this._issuesStorage.updateIssue(i);
+            this._issuesStorage.save();
+            item.refreshBookmarkButton(i.ri_bookmark);
         }));
 
         let groupByKey = this._settings.get_string('group-by');

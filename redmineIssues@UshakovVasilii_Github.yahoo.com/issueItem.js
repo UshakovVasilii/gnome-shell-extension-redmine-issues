@@ -39,10 +39,20 @@ const IssueItem = new Lang.Class({
         if(unread)
           this._showMarkReadButton();
 
+        this.bookmarkButton = new St.Button({
+            child: new St.Icon({icon_name: (issue.ri_bookmark ? 'user-bookmarks-symbolic' : 'bookmark-new-symbolic'),
+                                style_class: 'system-status-icon'})
+        });
+        this._buttonBox.add(this.bookmarkButton);
+
         this.removeIssueButton = new St.Button({
             child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
         });
         this._buttonBox.add(this.removeIssueButton);
+    },
+
+    refreshBookmarkButton : function(ri_bookmark){
+        this.bookmarkButton.child.icon_name = ri_bookmark ? 'user-bookmarks-symbolic' : 'bookmark-new-symbolic';
     },
 
     setMaxWidth : function(width){

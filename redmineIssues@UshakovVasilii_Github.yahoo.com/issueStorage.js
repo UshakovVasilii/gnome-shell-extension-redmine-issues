@@ -91,8 +91,13 @@ const IssueStorage = new Lang.Class({
     },
 
     updateIssue : function(issue){
-        if(!this.issues[issue.id])
+        let oldIssue = this.issues[issue.id];
+        if(!oldIssue)
             return false;
+
+        if(issue.ri_bookmark==undefined)
+            issue.ri_bookmark = oldIssue.ri_bookmark;
+
         this.issues[issue.id] = issue;
         this._hasChanges = true;
         return true;

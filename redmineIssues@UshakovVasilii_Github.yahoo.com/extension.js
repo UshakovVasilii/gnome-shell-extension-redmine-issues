@@ -315,10 +315,7 @@ const RedmineIssues = new Lang.Class({
 
     _loadIssues : function(filter, callback){
         this._debug('Load filter "' + filter + '"...');
-        let redmineUrl = this._settings.get_string('redmine-url');
-        if(redmineUrl && redmineUrl.slice(-1) != '/')
-            redmineUrl += '/';
-        let url = redmineUrl + 'issues.json?' + filter;
+        let url = this._buildRedmineUrl() + 'issues.json?' + filter;
         let request = Soup.Message.new('GET', url);
         if(!request){
            this._debug('request is null, "' + url + '" is wrong');
@@ -377,10 +374,7 @@ const RedmineIssues = new Lang.Class({
     _loadIssue : function(id, callback){
         this._debug('Load issue #' + id + '...');
         id = parseInt(id, 10);
-        let redmineUrl = this._settings.get_string('redmine-url');
-        if(redmineUrl && redmineUrl.slice(-1) != '/')
-            redmineUrl += '/';
-        let url = redmineUrl + 'issues/' + id + '.json';
+        let url = this._buildRedmineUrl() + 'issues/' + id + '.json';
         let request = Soup.Message.new('GET', url);
 
         if(!request){
@@ -430,10 +424,20 @@ const RedmineIssues = new Lang.Class({
             this._issuesStorage.removeIssue(issue.id);
             this._removeIssueMenuItem(issue);
             this._issuesStorage.save();
+
+            let url = this._buildRedmineUrl() + 'issues/' + issueId;
+            this._notify(_('#%s was removed').format(issueId), _('%s do not match with any filters and not bookmark, so removed').format(url));
         }));
 
         this._issuesStorage.save();
         this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
+    },
+
+    _buildRedmineUrl : function(){
+        let redmineUrl = this._settings.get_string('redmine-url');
+        if(redmineUrl && redmineUrl.slice(-1) != '/')
+            redmineUrl += '/';
+        return redmineUrl;
     },
 
     _refreshIssueMenuItem : function(newIssue) {
@@ -597,10 +601,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _issueItemAtivated : function(item) {
-        let redmineUrl = this._settings.get_string('redmine-url');
-        if(redmineUrl && redmineUrl.slice(-1) != '/')
-            redmineUrl += '/';
-        let url = redmineUrl + 'issues/' + item.issueId;
+        let url = this._buildRedmineUrl() + 'issues/' + item.issueId;
         Util.spawn(['xdg-open', url]);
         this._issuesStorage.updateIssueToRead(item.issueId);
         this._makeMenuItemRead(item);

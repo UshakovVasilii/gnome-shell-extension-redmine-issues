@@ -304,8 +304,6 @@ const RedmineIssues = new Lang.Class({
     },
 
     _addOrRefreshIssue : function(issue){
-        if(!issue.ri_bookmark)
-            issue.ri_bookmark=false;
         if(this._issuesStorage.addIssue(issue)) {
             this._addIssueMenuItem(issue);
         } else {

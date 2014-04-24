@@ -126,6 +126,9 @@ const IssueStorage = new Lang.Class({
             return false;
         }
 
+        if(issue.ri_bookmark == undefined)
+            issue.ri_bookmark = false;
+
         issue.unread_fields = ['subject'];
         Сonstants.LABEL_KEYS.forEach(function(key){
             let value = issue[key];

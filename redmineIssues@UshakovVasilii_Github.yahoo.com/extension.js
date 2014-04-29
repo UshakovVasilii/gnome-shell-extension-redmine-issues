@@ -263,6 +263,7 @@ const RedmineIssues = new Lang.Class({
 
     _refresh : function() {
         this._refreshing = true;
+        this._hasRefreshError = false;
 
         this._bookmarkIssuesForCheck = [];
         this._unbookmarkIssuesForCheck = [];
@@ -348,6 +349,8 @@ const RedmineIssues = new Lang.Class({
                 }
             } else if(response.status_code && response.status_code >= 100) {
                 this._notify(_('Warning'), _('Cannot load filter "%s", error status_code=%s').format(filter, response.status_code));
+            } else {
+                this._hasRefreshError = true;
             }
   
             this._continueOrFinishIssuesLoading(filter);
@@ -390,6 +393,8 @@ const RedmineIssues = new Lang.Class({
                 callback(this._convertIssueFromResponse(issue));
             } else if(response.status_code && response.status_code >= 100) {
                 this._notify(_('Warning'), _('Cannot load issue #%s, error status_code=%s').format(id, response.status_code));
+            } else {
+                this._hasRefreshError = true;
             }
             this._continueOrFinishIssueLoading(id);
         }));
@@ -416,16 +421,20 @@ const RedmineIssues = new Lang.Class({
     _finishRefresh : function(){
         this._refreshing = false;
 
-        this._unbookmarkIssuesForCheck.forEach(Lang.bind(this, function(issueId){
-            this._debug('Delete unbookmark issue #' + issueId + '...');
-            let issue = this._issuesStorage.issues[issueId];
-            this._issuesStorage.removeIssue(issue.id);
-            this._removeIssueMenuItem(issue);
-            this._issuesStorage.save();
+        if(this._hasRefreshError){
+            this._debug('Issues will not clean, refresh has some error');
+        } else {
+            this._unbookmarkIssuesForCheck.forEach(Lang.bind(this, function(issueId){
+                this._debug('Delete unbookmark issue #' + issueId + '...');
+                let issue = this._issuesStorage.issues[issueId];
+                this._issuesStorage.removeIssue(issue.id);
+                this._removeIssueMenuItem(issue);
+                this._issuesStorage.save();
 
-            let url = this._buildRedmineUrl() + 'issues/' + issueId;
-            this._notify(_('#%s was removed').format(issueId), _('%s do not match with any filters and not bookmark, so removed').format(url));
-        }));
+                let url = this._buildRedmineUrl() + 'issues/' + issueId;
+                this._notify(_('#%s was removed').format(issueId), _('%s do not match with any filters and not bookmark, so removed').format(url));
+            }));
+        }
 
         this._issuesStorage.save();
         this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';

@@ -62,7 +62,7 @@
 			<summary>Min Menu Item Width</summary>
 		</key>
 		<key name="filters" type="as">
-			<default>[]</default>
+			<default>['assigned_to_id=me&amp;status_id=open&amp;limit=100 // My open (Default)']</default>
 			<summary>Filters</summary>
 		</key>
 

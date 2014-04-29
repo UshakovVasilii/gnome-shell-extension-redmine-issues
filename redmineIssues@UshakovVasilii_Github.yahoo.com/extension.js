@@ -510,6 +510,7 @@ const RedmineIssues = new Lang.Class({
             delete this._issueItems[groupId];
             this._issueGroupItems[groupId].destroy();
             delete this._issueGroupItems[groupId];
+            this._refreshIcon();
         } else {
             this._refreshGroupStyleClass(groupId);
         }
@@ -580,14 +581,19 @@ const RedmineIssues = new Lang.Class({
             this._extensionIcon.gicon = this._gicon_unread;
         } else {
             this._issueGroupItems[groupId].actor.remove_style_class_name('ri-group-label-unread');
-            for(let issueId in this._issuesStorage.issues){
-                if(this._issuesStorage.issues[issueId].unread_fields.length > 0){
-                    unread = true;
-                    break;
-                }
-            }
-            this._extensionIcon.gicon = unread ? this._gicon_unread : this._gicon_read;
+            this._refreshIcon();
         }
+    },
+
+    _refreshIcon : function(){
+        let unread = false;
+        for(let issueId in this._issuesStorage.issues){
+            if(this._issuesStorage.issues[issueId].unread_fields.length > 0){
+                unread = true;
+                break;
+            }
+        }
+        this._extensionIcon.gicon = unread ? this._gicon_unread : this._gicon_read;
     },
 
     _makeMenuItemRead : function(item){

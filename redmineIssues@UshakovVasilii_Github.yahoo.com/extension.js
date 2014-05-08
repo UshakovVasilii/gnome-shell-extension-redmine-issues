@@ -432,7 +432,7 @@ const RedmineIssues = new Lang.Class({
                 this._issuesStorage.save();
 
                 let url = this._buildRedmineUrl() + 'issues/' + issueId;
-                this._notify(_('#%s was removed').format(issueId), _('%s do not match with any filters and not bookmark, so removed').format(url));
+                this._notify(_('#%s was removed').format(issueId), _('%s - %s do not match with any filters and not bookmark, so removed').format(issue.subject, url));
             }));
         }
 

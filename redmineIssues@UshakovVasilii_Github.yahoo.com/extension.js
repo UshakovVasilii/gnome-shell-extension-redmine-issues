@@ -437,7 +437,8 @@ const RedmineIssues = new Lang.Class({
         }
 
         this._issuesStorage.save();
-        this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
+        if(this.commands.refreshButton.child) // for disabled state
+            this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
     },
 
     _buildRedmineUrl : function(){

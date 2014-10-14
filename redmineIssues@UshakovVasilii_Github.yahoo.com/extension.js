@@ -10,6 +10,7 @@ const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 
 const session = new Soup.SessionAsync();
+session.set_property('ssl-strict', false);
 Soup.Session.prototype.add_feature.call(session, new Soup.ProxyResolverDefault());
 
 const Gettext = imports.gettext.domain('redmine-issues');

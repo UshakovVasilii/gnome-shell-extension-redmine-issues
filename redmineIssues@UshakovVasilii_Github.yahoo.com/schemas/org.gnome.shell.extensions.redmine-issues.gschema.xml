@@ -61,6 +61,14 @@
 			<default>600</default>
 			<summary>Min Menu Item Width</summary>
 		</key>
+		<key name="order-by" type="s">
+			<default>'id'</default>
+			<summary>Order By</summary>
+		</key>
+		<key name="desc-order" type="b">
+			<default>false</default>
+			<summary>Descending order</summary>
+		</key>
 		<key name="filters" type="as">
 			<default>['assigned_to_id=me&amp;status_id=open&amp;limit=100 // My open (Default)']</default>
 			<summary>Filters</summary>

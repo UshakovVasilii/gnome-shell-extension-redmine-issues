@@ -56,52 +56,49 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         let i = 0;
 
         // Group By ComboBox
-        let groupModel = new Gtk.ListStore();
-        groupModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
 
-        let group = new Gtk.ComboBox({model: groupModel});
-        let groupRenderer = new Gtk.CellRendererText();
-        group.pack_start(groupRenderer, true);
-        group.add_attribute(groupRenderer, 'text', 1);
+        this._addComboBox({
+            tab: displayTab,
+            items : {
+                project: _('Project'),
+                category: _('Category'),
+                fixed_version: _('Target version'),
+                tracker: _('Tracker'),
+                priority: _('Priority'),
+                status: _('Status'),
+                assigned_to: _('Assigned To'),
+                author: _('Author')},
+            key: 'group-by', y : i++, x : 0,
+            label: _('Group By')
+        });
 
-        let groupItems = [
-            'project',
-            'category',
-            'fixed_version',
-            'tracker',
-            'priority',
-            'status',
-            'assigned_to',
-            'author'
-        ];
-
-        groupModel.set(groupModel.append(), [0, 1], [groupItems[0], _('Project')]);
-        groupModel.set(groupModel.append(), [0, 1], [groupItems[1], _('Category')]);
-        groupModel.set(groupModel.append(), [0, 1], [groupItems[2], _('Target version')]);
-        groupModel.set(groupModel.append(), [0, 1], [groupItems[3], _('Tracker')]);
-        groupModel.set(groupModel.append(), [0, 1], [groupItems[4], _('Priority')]);
-        groupModel.set(groupModel.append(), [0, 1], [groupItems[5], _('Status')]);
-        groupModel.set(groupModel.append(), [0, 1], [groupItems[6], _('Assigned To')]);
-        groupModel.set(groupModel.append(), [0, 1], [groupItems[7], _('Author')]);
-
-        group.set_active(groupItems.indexOf(this._settings.get_string('group-by')));
-        
-        group.connect('changed', Lang.bind(this, function(entry) {
-            let [success, iter] = group.get_active_iter();
-            if (!success)
-                return;
-            this._settings.set_string('group-by', groupModel.get_value(iter, 0))
-        }));
-
-        displayTab.attach(new Gtk.Label({ label: _('Group By'), halign : Gtk.Align.END}), 0, i, 1, 1);
-        displayTab.attach(group, 1, i++, 1, 1);
 
         // Switches
+        this._addSwitch({tab : displayTab, key : 'desc-order', label : _('Descending Order'), y : i++, x : 0});
         this._addSwitch({tab : displayTab, key : 'show-status-item-status', label : _('Show Status'), y : i++, x : 0});
         this._addSwitch({tab : displayTab, key : 'show-status-item-assigned-to', label : _('Show Assigned To'), y : i++, x : 0});
         this._addSwitch({tab : displayTab, key : 'show-status-item-tracker', label : _('Show Tracker'), y : i++, x : 0});
         this._addSwitch({tab : displayTab, key : 'show-status-item-priority', label : _('Show Priority'), y : i++, x : 0});
         i=0;
+
+        this._addComboBox({
+            tab: displayTab,
+            items : {
+                id: _('ID'),
+                updated_on: _('Updated on'),
+                done_ratio: _('Done Ratio'),
+                project: _('Project'),
+                category: _('Category'),
+                fixed_version: _('Target version'),
+                tracker: _('Tracker'),
+                priority: _('Priority'),
+                status: _('Status'),
+                assigned_to: _('Assigned To'),
+                author: _('Author')},
+            key: 'order-by', y : i++, x : 2,
+            label: _('Order By')
+        });
+
         this._addSwitch({tab : displayTab, key : 'show-status-item-done-ratio', label : _('Show Done Ratio'), y : i++, x : 2});
         this._addSwitch({tab : displayTab, key : 'show-status-item-author', label : _('Show Author'), y : i++, x : 2});
         this._addSwitch({tab : displayTab, key : 'show-status-item-project', label : _('Show Project'), y : i++, x : 2});
@@ -164,7 +161,34 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         let sw = new Gtk.Switch({halign : Gtk.Align.END, valign : Gtk.Align.CENTER});
         params.tab.attach(sw, params.x + 1, params.y, 1, 1);
         this._settings.bind(params.key, sw, 'active', Gio.SettingsBindFlags.DEFAULT);
+    },
+
+    _addComboBox : function(params){
+        let model = new Gtk.ListStore();
+        model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
+
+        let combobox = new Gtk.ComboBox({model: model});
+        let renderer = new Gtk.CellRendererText();
+        combobox.pack_start(renderer, true);
+        combobox.add_attribute(renderer, 'text', 1);
+
+        for(let k in params.items){
+            model.set(model.append(), [0, 1], [k, params.items[k]]);
+        }
+
+        combobox.set_active(Object.keys(params.items).indexOf(this._settings.get_string(params.key)));
+        
+        combobox.connect('changed', Lang.bind(this, function(entry) {
+            let [success, iter] = combobox.get_active_iter();
+            if (!success)
+                return;
+            this._settings.set_string(params.key, model.get_value(iter, 0))
+        }));
+
+        params.tab.attach(new Gtk.Label({ label: params.label, halign : Gtk.Align.END}), params.x, params.y, 1, 1);
+        params.tab.attach(combobox, params.x + 1, params.y, 1, 1);
     }
+
 });
 
 function buildPrefsWidget() {

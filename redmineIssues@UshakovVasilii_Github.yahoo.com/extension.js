@@ -80,7 +80,9 @@ const RedmineIssues = new Lang.Class({
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
             this._addSettingChangedSignal('show-status-item-' + key.replace('_','-'), Lang.bind(this, this._reloadStatusLabels));
         }));
-        this._addSettingChangedSignal('group-by', Lang.bind(this, this._groupByChanged));
+        this._addSettingChangedSignal('group-by', Lang.bind(this, this._reranderAll));
+        this._addSettingChangedSignal('order-by', Lang.bind(this, this._reranderAll));
+        this._addSettingChangedSignal('desc-order', Lang.bind(this, this._reranderAll));
         this._addSettingChangedSignal('max-subject-width', Lang.bind(this, this._maxSubjectWidthChanged));
         this._addSettingChangedSignal('min-menu-item-width', Lang.bind(this, this._minMenuItemWidthChanged));
         this._addSettingChangedSignal('auto-refresh', Lang.bind(this, this._autoRefreshChanged));
@@ -169,7 +171,7 @@ const RedmineIssues = new Lang.Class({
         }
     },
 
-    _groupByChanged : function(){
+    _reranderAll : function(){
         for(let groupId in this._issueGroupItems){
             this._issueGroupItems[groupId].destroy();
         }
@@ -528,7 +530,8 @@ const RedmineIssues = new Lang.Class({
 
     _addIssueMenuItem : function(issue){
         this._debug('Add issue menu item... #' + issue.id);
-        let item = new IssueItem.IssueItem(issue);
+        let sortBy = this._settings.get_string('order-by');
+        let item = new IssueItem.IssueItem(issue, sortBy);
         item.markReadButton.connect('clicked', Lang.bind(this, function(){
             this._issuesStorage.updateIssueToRead(item.issueId);
             this._makeMenuItemRead(item);
@@ -567,11 +570,23 @@ const RedmineIssues = new Lang.Class({
         }
         this._issueItems[groupId][issue.id] = item;
 
-        let issueIds = [];
-        for(let i in this._issueItems[groupId]){
-            issueIds.push(this._issueItems[groupId][i].issueId);
+        let items = [];
+        for(let i in this._issueItems[groupId]) {
+            items.push(this._issueItems[groupId][i]);
         }
-        issueIds.sort();
+
+        let deskOrder = this._settings.get_boolean('desc-order');
+        items.sort(function(a, b){
+            let k = a.sortKey < b.sortKey ? -1 : (a.sortKey > b.sortKey ? 1 : 0);
+            if(k == 0)
+                k = a.issueId < b.issueId ? -1 : (a.issueId > b.issueId ? 1 : 0);
+            return deskOrder ? -k : k;
+        });
+
+        let issueIds = [];
+        for(let i in items){
+            issueIds.push(items[i].issueId);
+        }
 
         issueItem.menu.addMenuItem(item.menuItem, issueIds.indexOf(item.issueId));
         this._refreshGroupStyleClass(groupId);

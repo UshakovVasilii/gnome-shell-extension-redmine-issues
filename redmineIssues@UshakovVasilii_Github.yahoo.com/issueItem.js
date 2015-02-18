@@ -21,7 +21,7 @@ const IssueItem = new Lang.Class({
             sortKey = issue[sortBy] || -1;
         } else if(sortBy == 'priority'){
             sortKey = issue[sortBy] ? (issue[sortBy].id || -1) : -1;
-        } else if(sortBy == 'updated_on'){
+        } else if(sortBy == 'updated_on' || sortBy ==  'subject'){
             sortKey = issue[sortBy] || '';
         } else {
             sortKey = issue[sortBy] ? (issue[sortBy].name || '') : '';

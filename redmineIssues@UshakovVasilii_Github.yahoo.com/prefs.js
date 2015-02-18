@@ -49,7 +49,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         let autoRefresh = Gtk.SpinButton.new_with_range (0, 60, 1);
         generalTab.attach(autoRefresh, 1, 3, 1, 1);
         this._settings.bind('auto-refresh', autoRefresh, 'value', Gio.SettingsBindFlags.DEFAULT);
-        
+
         // Display tab
         let displayTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
         this.append_page(displayTab,  new Gtk.Label({label: _('Display')}));
@@ -85,6 +85,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
             tab: displayTab,
             items : {
                 id: _('ID'),
+		subject : _('Subject'),
                 updated_on: _('Updated on'),
                 done_ratio: _('Done Ratio'),
                 project: _('Project'),
@@ -118,7 +119,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         // Filters tab
         let filtersTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
         this.append_page(filtersTab,  new Gtk.Label({label: _('Filters')}));
-        
+
         let filterHelp = _('Examples:') + '\n<i>status_id=1&amp;project_id=my-project</i>\n' +
             '<i>assigned_to_id=me&amp;status_id=open // You can add comments</i>\n' +
             _('More information:') + ' <a href="http://www.redmine.org/projects/redmine/wiki/Rest_Issues">Rest Issue</a>';
@@ -177,7 +178,7 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         }
 
         combobox.set_active(Object.keys(params.items).indexOf(this._settings.get_string(params.key)));
-        
+
         combobox.connect('changed', Lang.bind(this, function(entry) {
             let [success, iter] = combobox.get_active_iter();
             if (!success)

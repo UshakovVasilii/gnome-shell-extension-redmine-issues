@@ -13,20 +13,9 @@ const Сonstants = Me.imports.constants;
 const IssueItem = new Lang.Class({
     Name: 'IssueItem',
 
-    _init: function(issue, sortBy){
+    _init: function(issue, sortKey){
         this._settings = Convenience.getSettings();
 
-        let sortKey = null;
-        if(sortBy == 'id' || sortBy == 'done_ratio') {
-            sortKey = issue[sortBy] || -1;
-        } else if(sortBy == 'priority'){
-            sortKey = issue[sortBy] ? (issue[sortBy].id || -1) : -1;
-        } else if(sortBy == 'updated_on' || sortBy ==  'subject'){
-            sortKey = issue[sortBy] || '';
-        } else {
-            sortKey = issue[sortBy] ? (issue[sortBy].name || '') : '';
-        }
-global.log('!!!!!!!' + sortKey);
         this.menuItem = new PopupMenu.PopupBaseMenuItem();
         this.issueId = issue.id;
         this.sortKey = sortKey;

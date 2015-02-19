@@ -108,7 +108,7 @@ const RedmineIssues = new Lang.Class({
                     this.commands.destroy();
                     this.commands = null;
                 }
-            
+
                 this.helpMenuItem = new PopupMenu.PopupMenuItem(_('You should input "Api Access Key" and "Redmine URL"'));
                 this.helpMenuItem.connect('activate', this._openAppPreferences);
                 this.menu.addMenuItem(this.helpMenuItem);
@@ -289,7 +289,7 @@ const RedmineIssues = new Lang.Class({
                 filter = filter.slice(0, index);
             filters.push(filter.trim());
         }
-        
+
         this._filtersForCheck = filters.slice(0);
         if(filters.length > 0){
             filters.forEach(Lang.bind(this, function(filter){
@@ -354,7 +354,7 @@ const RedmineIssues = new Lang.Class({
             } else {
                 this._hasRefreshError = true;
             }
-  
+
             this._continueOrFinishIssuesLoading(filter);
         }));
     },
@@ -364,7 +364,7 @@ const RedmineIssues = new Lang.Class({
         if (filterIndex > -1) {
             this._filtersForCheck.splice(filterIndex, 1);
         }
-  
+
         if(this._bookmarkIssuesForCheck.length == 0 && this._filtersForCheck.length == 0){
             this._finishRefresh();
         } else if(this._filtersForCheck.length == 0){
@@ -450,32 +450,39 @@ const RedmineIssues = new Lang.Class({
         return redmineUrl;
     },
 
+    _toSortKey : function(issue, k){
+        if(k == 'id' || k == 'done_ratio')
+            return issue[k] || -1;
+        if(k == 'priority')
+           return issue[k] ? (issue[k].id || -1) : -1;
+        if(k == 'updated_on' || k ==  'subject')
+            return issue[k] || '';
+        return issue[k] ? (issue[k].name || '') : '';
+    },
+
     _refreshIssueMenuItem : function(newIssue) {
         let oldIssue = this._issuesStorage.issues[newIssue.id];
         if(!oldIssue) // for ignored issue
             return;
         if(!this._issuesStorage.updateIssueUnreadFields(newIssue))
             return;
-        let groupByKey = this._settings.get_string('group-by');
-        let groupId = oldIssue[groupByKey] ? oldIssue[groupByKey].id : -1;
 
-        let groupChanged = false;
-        Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
-            if(newIssue.unread_fields.indexOf(key) >= 0){
-                if(groupByKey == key && (oldIssue[key] && newIssue[key] && oldIssue[key].id != newIssue[key].id
-                        || oldIssue[key] && !newIssue[key] || !oldIssue[key] && newIssue[key])){
-                    groupChanged=true;
-                }
-            }
-        }));
+        let groupBy = this._settings.get_string('group-by');
+        let orderBy = this._settings.get_string('order-by');
 
-        if(groupChanged){
+        let oldGroupKey = oldIssue[groupBy] ? oldIssue[groupBy].id : -1;
+        let newGroupKey = newIssue[groupBy] ? newIssue[groupBy].id : -1;
+
+        let oldSortKey = this._toSortKey(oldIssue, orderBy);
+        let newSortKey = this._toSortKey(newIssue, orderBy);
+
+        if(newGroupKey != oldGroupKey || oldSortKey != newSortKey){
             this._removeIssueMenuItem(oldIssue);
             this._addIssueMenuItem(newIssue);
         } else {
-            let item = this._issueItems[groupId][newIssue.id];
+            let item = this._issueItems[oldGroupKey][newIssue.id];
             item.makeUnread(newIssue);
-            this._refreshGroupStyleClass(groupId);
+            this._refreshGroupStyleClass(oldGroupKey);
         }
     },
 
@@ -496,7 +503,7 @@ const RedmineIssues = new Lang.Class({
     },
 
     _removeIssueClicked : function(issue){
-        let message = issue.ri_bookmark ? 
+        let message = issue.ri_bookmark ?
             _('Are you sure you want to delete "%s"?').format(issue.subject) :
             _('Are you sure you want to delete "%s"?\nIssue will be added to ignore list').format(issue.subject)
         let confirmDialog = new ConfirmDialog.ConfirmDialog(
@@ -531,7 +538,7 @@ const RedmineIssues = new Lang.Class({
     _addIssueMenuItem : function(issue){
         this._debug('Add issue menu item... #' + issue.id);
         let sortBy = this._settings.get_string('order-by');
-        let item = new IssueItem.IssueItem(issue, sortBy);
+        let item = new IssueItem.IssueItem(issue, this._toSortKey(issue, sortBy));
         item.markReadButton.connect('clicked', Lang.bind(this, function(){
             this._issuesStorage.updateIssueToRead(item.issueId);
             this._makeMenuItemRead(item);

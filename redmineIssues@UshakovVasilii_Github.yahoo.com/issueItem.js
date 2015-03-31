@@ -35,7 +35,7 @@ const IssueItem = new Lang.Class({
         this._buttonBox = new St.BoxLayout();
         this.menuItem.actor.add(this._buttonBox);
         this.markReadButton = new St.Button({
-            child: new St.Icon({icon_name: 'object-select-symbolic', style_class: 'system-status-icon'})
+            child: new St.Icon({icon_name: 'object-select-symbolic', style_class: 'ri-issue-icon'})
         });
 
         if(unread)
@@ -43,12 +43,12 @@ const IssueItem = new Lang.Class({
 
         this.bookmarkButton = new St.Button({
             child: new St.Icon({icon_name: (issue.ri_bookmark ? 'user-bookmarks-symbolic' : 'bookmark-new-symbolic'),
-                                style_class: 'system-status-icon'})
+                                style_class: 'ri-issue-icon'})
         });
         this._buttonBox.add(this.bookmarkButton);
 
         this.removeIssueButton = new St.Button({
-            child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'system-status-icon'})
+            child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'ri-issue-icon'})
         });
         this._buttonBox.add(this.removeIssueButton);
     },

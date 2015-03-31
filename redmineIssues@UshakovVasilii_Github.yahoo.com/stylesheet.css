@@ -6,8 +6,9 @@
     spacing: 1em;
 }
 
-.popup-menu .system-status-icon {
-    icon-size: 16px;
+.ri-issue-icon {
+    icon-size: 1.09em;
+    padding: 0 5px;
 }
 
 .ri-issue-label-unread {

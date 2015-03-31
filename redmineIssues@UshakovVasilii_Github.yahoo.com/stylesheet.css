@@ -6,6 +6,10 @@
     spacing: 1em;
 }
 
+.popup-menu .system-status-icon {
+    icon-size: 16px;
+}
+
 .ri-issue-label-unread {
     font-style: oblique;
     font-weight: bold;

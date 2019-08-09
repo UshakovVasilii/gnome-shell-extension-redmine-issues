@@ -7,12 +7,10 @@ const ModalDialog = imports.ui.modalDialog;
 const Gettext = imports.gettext.domain('redmine-issues');
 const _ = Gettext.gettext;
 
-const ConfirmDialog = new Lang.Class({
-    Name: 'ConfirmDialog',
-    Extends: ModalDialog.ModalDialog,
+const ConfirmDialog = class extends ModalDialog.ModalDialog {
 
-    _init: function(title, message, callback) {
-        this.parent();
+    constructor(title, message, callback) {
+        super();
         this._callback = callback;
 
         this.contentLayout.add(
@@ -24,10 +22,10 @@ const ConfirmDialog = new Lang.Class({
             { label: _('Cancel'), action: Lang.bind(this, this.close), key: Clutter.Escape},
             { label: _('Ok'), action: Lang.bind(this, this._onOkButton), key: Clutter.Return }
         ]);
-    },
+    }
 
-    _onOkButton: function() {
+    _onOkButton() {
         this._callback();
         this.close();
     }
-});
+};

@@ -4,26 +4,23 @@ const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
 const Lang = imports.lang;
 
-const Gettext = imports.gettext.domain('redmine-issues');
-const _ = Gettext.gettext;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Convenience = Me.imports.convenience;
+
+const Gettext = imports.gettext.domain(Me.metadata['gettext-domain']);
+const _ = Gettext.gettext;
 
 function init() {
-    Convenience.initTranslations();
+    ExtensionUtils.initTranslations();
 }
 
-const RedmineIssuesPrefsWidget = new GObject.Class({
-    Name: 'Redmine.Issues.Prefs.Widget',
-    GTypeName: 'RedmineIssuesPrefsWidget',
-    Extends: Gtk.Notebook,
+var RedmineIssuesPrefsWidget = new GObject.registerClass(class RedmineIssuses_RedmineIssuesPrefsWidget extends Gtk.Notebook {
 
-    _init: function(params) {
-        this.parent(params);
+    _init(params) {
+        // this.parent(params);
+        super._init(params);
 
-        this._settings = Convenience.getSettings();
+        this._settings = ExtensionUtils.getSettings();
 
         // General tab
         let generalTab = new Gtk.Grid({row_spacing:10,column_spacing:10, margin:10});
@@ -136,9 +133,9 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
         this._curlHelp = new Gtk.Entry({ hexpand: true, editable: false});
         filtersTab.attach(this._curlHelp, 0, 3, 1, 1);
         this._refreshCurlHelp();
-    },
+    }
 
-    _refreshCurlHelp : function(){
+    _refreshCurlHelp(){
         let url = this._settings.get_string('redmine-url');
         let key = this._settings.get_string('api-access-key');
         if(url && url.slice(-1) != '/')
@@ -147,24 +144,24 @@ const RedmineIssuesPrefsWidget = new GObject.Class({
             this._curlHelp.text = 'curl -H "X-Redmine-API-Key: ' + key + '" ' + url +'issues.json?{Filter}';
         } else
             this._curlHelp.text = '';
-    },
+    }
 
-    _filtersChanged : function(){
+    _filtersChanged(){
          let text = this._filtersBuffer.text;
          let filtersData = [];
          if(text)
              filtersData = text.split('\n');
          this._settings.set_strv('filters', filtersData);
-    },
+    }
 
-    _addSwitch : function(params){
+    _addSwitch(params){
         params.tab.attach(new Gtk.Label({ label: params.label, halign : Gtk.Align.END}), params.x, params.y, 1, 1);
         let sw = new Gtk.Switch({halign : Gtk.Align.END, valign : Gtk.Align.CENTER});
         params.tab.attach(sw, params.x + 1, params.y, 1, 1);
         this._settings.bind(params.key, sw, 'active', Gio.SettingsBindFlags.DEFAULT);
-    },
+    }
 
-    _addComboBox : function(params){
+    _addComboBox(params){
         let model = new Gtk.ListStore();
         model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
 

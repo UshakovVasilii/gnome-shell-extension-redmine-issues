@@ -7,10 +7,9 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Сonstants = Me.imports.constants;
 
-const IssueStorage = new Lang.Class({
-    Name: 'IssueStorage',
+const IssueStorage = class {
 
-    _init: function() {
+    constructor() {
 
         let path = GLib.build_pathv('/', [GLib.get_user_data_dir(), 'redmine-issues']);
         if(!GLib.file_test(path, GLib.FileTest.EXISTS))
@@ -24,9 +23,9 @@ const IssueStorage = new Lang.Class({
             GLib.file_set_contents(this._issuesIgnorePath, '');
 
         this._load();
-    },
+    }
 
-    _load : function(){
+    _load(){
         let issuesFile = Gio.file_new_for_path(this._issuesPath);
         let issuesData = Shell.get_file_contents_utf8_sync(issuesFile.get_path());
         if(issuesData){
@@ -52,14 +51,14 @@ const IssueStorage = new Lang.Class({
         } else {
             this.issuesIgnore = [];
         }
-    },
+    }
 
-    _debug : function(message){
+    _debug(message){
         if(this.debugEnabled)
             global.log('[redmine-issues] ' + message);
-    },
+    }
 
-    save : function(){
+    save(){
         if(!this._hasChanges){
             this._debug('Nothing to save');
             return;
@@ -75,22 +74,22 @@ const IssueStorage = new Lang.Class({
 
         this._hasChanges = false;
         this._debug('Issues saved');
-    },
+    }
 
-    cleanIgnoreList : function(){
+    cleanIgnoreList(){
         this._debug('Clean ignore list...');
         this.issuesIgnore = [];
         this._saveFile(this._issuesIgnorePath, this.issuesIgnore);
-    },
+    }
 
-    _saveFile : function(path, data){
+    _saveFile(path, data){
         let file = Gio.file_new_for_path(path);
         let out = file.replace(null, false, Gio.FileCreateFlags.NONE, null);
         Shell.write_string_to_stream(out, JSON.stringify(data, null, '\t'));
         out.close(null);
-    },
+    }
 
-    updateIssue : function(issue){
+    updateIssue(issue){
         let oldIssue = this.issues[issue.id];
         if(!oldIssue)
             return false;
@@ -101,17 +100,17 @@ const IssueStorage = new Lang.Class({
         this.issues[issue.id] = issue;
         this._hasChanges = true;
         return true;
-    },
+    }
 
-    updateIssueToRead : function(issueId){
+    updateIssueToRead(issueId){
         let issue = this.issues[issueId];
         if(!issue.unread_fields || issue.unread_fields.length == 0)
             return false;
         issue.unread_fields = [];
         return this.updateIssue(issue);
-    },
+    }
 
-    addIssue : function(issue, force){
+    addIssue(issue, force){
         if(this.issues[issue.id])
             return false;
 
@@ -139,9 +138,9 @@ const IssueStorage = new Lang.Class({
         this.issues[issue.id] = issue;
         this._hasChanges = true;
         return true;
-    },
+    }
 
-    removeIssue : function(issueId, force) {
+    removeIssue(issueId, force) {
         if(force){
             let i = this.issuesIgnore.indexOf(issueId);
             if (i < 0) {
@@ -153,15 +152,15 @@ const IssueStorage = new Lang.Class({
         delete this.issues[issueId];
         this._hasChanges = true;
         return true;
-    },
+    }
 
-    removeAll : function(issueId) {
+    removeAll(issueId) {
         this.issues = {};
         this._hasChanges = true;
         return true;
-    },
+    }
 
-    updateIssueUnreadFields : function(newIssue){
+    updateIssueUnreadFields(newIssue){
         let oldIssue = this.issues[newIssue.id];
         if(oldIssue.updated_on == newIssue.updated_on)
             return false;
@@ -188,4 +187,4 @@ const IssueStorage = new Lang.Class({
         return true;
     }
 
-});
+};

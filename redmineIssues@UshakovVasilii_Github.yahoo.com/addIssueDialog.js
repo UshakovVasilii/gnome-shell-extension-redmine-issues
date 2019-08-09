@@ -7,14 +7,12 @@ const ModalDialog = imports.ui.modalDialog;
 const Gettext = imports.gettext.domain('redmine-issues');
 const _ = Gettext.gettext;
 
-const AddIssueDialog = new Lang.Class({
-    Name: 'AddIssueDialog',
-    Extends: ModalDialog.ModalDialog,
+const AddIssueDialog = class extends ModalDialog.ModalDialog {
 
-    _init: function(callback) {
-        this.parent();
+    constructor(callback) {
+        super();
         this.callback = callback;
-        
+
 
         let addIssueTitle = new St.Label({
             style_class: 'ri-dialog-subject',
@@ -41,13 +39,13 @@ const AddIssueDialog = new Lang.Class({
                 this._onOkButton();
             }
         }));
-    },
+    }
 
-    _onOkButton: function() {
+    _onOkButton() {
         let text = this._issueText.get_text();
         if(text)
             text = text.replace(/[^0-9]/g, '');
         this.callback(text);
         this.close();
     }
-});
+};

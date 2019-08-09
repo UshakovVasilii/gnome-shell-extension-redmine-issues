@@ -6,10 +6,8 @@ const System = imports.ui.status.system;
 const Gettext = imports.gettext.domain('redmine-issues');
 const _ = Gettext.gettext;
 
-const Commands = new Lang.Class({
-    Name: 'Commands',
-
-    _init: function(){
+const Commands = class {
+    constructor(){
         this.commandMenuItem = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
 
         this.addIssueButton = this._createButton('list-add-symbolic');
@@ -25,39 +23,39 @@ const Commands = new Lang.Class({
         this._addSwitcher(this.refreshButton, this.cleanIgnoreListButton);
 
         this._makeVisible();
-    },
+    }
 
-    sync : function(){
+    sync(){
         this._makeVisible();
-    },
+    }
 
-    _makeVisible : function(){
+    _makeVisible(){
         this.addIssueButton.visible = true;
         this.preferencesButton.visible = true;
         this.markAllReadButton.visible = true;
         this.removeAllButton.visible = true;
         this.refreshButton.visible = true;
         this.cleanIgnoreListButton.visible = true;
-    },
+    }
 
-    setMinWidth : function(width){
+    setMinWidth(width){
         this.commandMenuItem.actor.style = 'min-width:' + width + 'px';
-    },
+    }
 
-    _addSwitcher : function(standard, alternate){
+    _addSwitcher(standard, alternate){
         let switcher = new System.AltSwitcher(standard, alternate);
         this.commandMenuItem.actor.add(switcher.actor, { expand: true, x_fill: false });
-    },
+    }
 
-    _createButton : function(icon_name){
+    _createButton(icon_name){
         return new St.Button({
             child: new St.Icon({icon_name: icon_name}),
             style_class: 'system-menu-action'
         });
-    },
-
-    destroy : function(){
-        this.commandMenuItem.destroy();   
     }
 
-});
+    destroy(){
+        this.commandMenuItem.destroy();
+    }
+
+};

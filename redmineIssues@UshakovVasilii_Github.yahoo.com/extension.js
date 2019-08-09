@@ -8,16 +8,13 @@ const Soup = imports.gi.Soup;
 const Util = imports.misc.util;
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
+const GObject = imports.gi.GObject;
 
 const session = new Soup.SessionAsync();
 Soup.Session.prototype.add_feature.call(session, new Soup.ProxyResolverDefault());
 
-const Gettext = imports.gettext.domain('redmine-issues');
-const _ = Gettext.gettext;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Convenience = Me.imports.convenience;
 const Сonstants = Me.imports.constants;
 const AddIssueDialog = Me.imports.addIssueDialog;
 const ConfirmDialog = Me.imports.confirmDialog;
@@ -25,31 +22,31 @@ const IssueStorage = Me.imports.issueStorage;
 const Commands = Me.imports.commands;
 const IssueItem = Me.imports.issueItem;
 
+const Gettext = imports.gettext.domain(Me.metadata['gettext-domain']);
+const _ = Gettext.gettext;
+
 let redmineIssues = null;
 
-const RISource = new Lang.Class({
-    Name: 'RISource',
-    Extends: MessageTray.Source,
+const RISource = class extends MessageTray.Source {
 
-    createIcon: function(size) {
+    createIcon(size) {
         return new St.Icon({
             gicon: Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-symbolic.svg'),
             icon_size: size
         });
-    },
+    }
 
-});
+};
 
-const RedmineIssues = new Lang.Class({
-    Name: 'RedmineIssuesMenuItem',
-    Extends: PanelMenu.Button,
 
-    _init: function() {
-        this.parent(St.Align.START);
+const RedmineIssues = GObject.registerClass(class RedmineIssues_RedmineIssues extends PanelMenu.Button {
+
+    _init() {
+        super._init(St.Align.START);
 
         this._source = new RISource(_('Redmine Issues'));
 
-        this._settings = Convenience.getSettings();
+        this._settings = ExtensionUtils.getSettings();
 
         this._gicon_read = Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-symbolic.svg');
         this._gicon_unread = Gio.icon_new_for_string(Me.path + '/icons/redmine-issues-unread-symbolic.svg');
@@ -91,13 +88,13 @@ const RedmineIssues = new Lang.Class({
         this._addSettingChangedSignal('api-access-key', Lang.bind(this, this._checkMainPrefs));
 
         this._startTimer();
-    },
+    }
 
-    _addSettingChangedSignal : function(key, callback){
+    _addSettingChangedSignal(key, callback){
         this._settingChangedSignals.push(this._settings.connect('changed::' + key, callback));
-    },
+    }
 
-    _checkMainPrefs : function(){
+    _checkMainPrefs(){
         let hasIssues = Object.keys(this._issuesStorage.issues).length!=0;
         let apiAccessKey = this._settings.get_string('api-access-key');
         let redmineUrl = this._settings.get_string('redmine-url');
@@ -120,14 +117,14 @@ const RedmineIssues = new Lang.Class({
             }
             this._addCommandMenuItem();
         }
-    },
+    }
 
-    _logsChanged : function(){
+    _logsChanged(){
         this._debugEnabled = this._settings.get_boolean('logs');
         this._issuesStorage.debugEnabled = this._debugEnabled;
-    },
+    }
 
-    _autoRefreshChanged : function(){
+    _autoRefreshChanged(){
         if(this._timeoutId) {
             Mainloop.source_remove(this._timeoutId);
             this._timeoutId = null;
@@ -136,9 +133,9 @@ const RedmineIssues = new Lang.Class({
         if(timeout > 0){
             this._timeoutId = Mainloop.timeout_add_seconds(timeout * 60, Lang.bind(this, this._startTimer));
         }
-    },
+    }
 
-    _startTimer : function(){
+    _startTimer(){
         let timeout = this._settings.get_int('auto-refresh');
         if(timeout > 0) {
             if(!(this._refreshing || !this._isMainPrefsValid)){
@@ -146,9 +143,9 @@ const RedmineIssues = new Lang.Class({
             }
             this._timeoutId = Mainloop.timeout_add_seconds(timeout * 60, Lang.bind(this, this._startTimer));
         }
-    },
+    }
 
-    _maxSubjectWidthChanged : function(){
+    _maxSubjectWidthChanged(){
         let width = this._settings.get_int('max-subject-width');
         for(let groupKey in this._issueItems){
             for(let itemKey in this._issueItems[groupKey]){
@@ -156,30 +153,30 @@ const RedmineIssues = new Lang.Class({
                 item.setMaxWidth(width);
             }
         }
-    },
+    }
 
-    _minMenuItemWidthChanged : function(){
+    _minMenuItemWidthChanged(){
         this.commands.setMinWidth(this._settings.get_int('min-menu-item-width'));
-    },
+    }
 
-    _addIssueMenuItems : function(){
+    _addIssueMenuItems(){
         this._issueGroupItems = {};
         this._issueItems = {};
 
         for(let issueId in this._issuesStorage.issues){
             this._addIssueMenuItem(this._issuesStorage.issues[issueId]);
         }
-    },
+    }
 
-    _reranderAll : function(){
+    _reranderAll(){
         for(let groupId in this._issueGroupItems){
             this._issueGroupItems[groupId].destroy();
         }
 
         this._addIssueMenuItems();
-    },
+    }
 
-    _addCommandMenuItem : function(){
+    _addCommandMenuItem(){
         this.commands = new Commands.Commands();
         this.commands.setMinWidth(this._settings.get_int('min-menu-item-width'));
 
@@ -191,16 +188,16 @@ const RedmineIssues = new Lang.Class({
         this.commands.cleanIgnoreListButton.connect('clicked', Lang.bind(this, this._cleanIgnoreListClicked));
 
         this.menu.addMenuItem(this.commands.commandMenuItem);
-    },
+    }
 
-    _refreshButtonClicked : function(){
+    _refreshButtonClicked(){
         if(this._refreshing || !this._isMainPrefsValid){
             return;
         }
         this._refresh();
-    },
+    }
 
-    _cleanIgnoreListClicked : function(){
+    _cleanIgnoreListClicked(){
         let confirmDialog = new ConfirmDialog.ConfirmDialog(
             _('Clean ignore list'),
             _('Are you sure you want to remove all issues from ignore list?'),
@@ -210,16 +207,16 @@ const RedmineIssues = new Lang.Class({
         );
         this.menu.close();
         confirmDialog.open();
-    },
+    }
 
-    _removeAllIssues : function(){
+    _removeAllIssues(){
         for(let issueId in this._issuesStorage.issues){
             this._removeIssueMenuItem(this._issuesStorage.issues[issueId]);
         }
         this._issuesStorage.removeAll();
-    },
+    }
 
-    _removeAllClicked : function(){
+    _removeAllClicked(){
         let confirmDialog = new ConfirmDialog.ConfirmDialog(
             _('Delete all issues'),
             _('Are you sure you want to delete all issues?'),
@@ -230,9 +227,9 @@ const RedmineIssues = new Lang.Class({
         );
         this.menu.close();
         confirmDialog.open();
-    },
+    }
 
-    _markAllReadClicked : function(){
+    _markAllReadClicked(){
         for(let groupKey in this._issueItems){
             for(let itemKey in this._issueItems[groupKey]){
                 let item = this._issueItems[groupKey][itemKey];
@@ -241,9 +238,9 @@ const RedmineIssues = new Lang.Class({
             }
         }
         this._issuesStorage.save();
-    },
+    }
 
-    _onDestroy : function(){
+    _onDestroy(){
         this._debug('Destroy');
         this._source.destroy();
         let settings = this._settings;
@@ -251,9 +248,9 @@ const RedmineIssues = new Lang.Class({
             settings.disconnect(signal);
         });
         Mainloop.source_remove(this._timeoutId);
-    },
+    }
 
-    _reloadStatusLabels : function(){
+    _reloadStatusLabels(){
         for(let groupKey in this._issueItems){
             for(let itemKey in this._issueItems[groupKey]){
                 let item = this._issueItems[groupKey][itemKey];
@@ -261,9 +258,9 @@ const RedmineIssues = new Lang.Class({
                 item.reloadStatusLabels(issue);
             }
         }
-    },
+    }
 
-    _refresh : function() {
+    _refresh() {
         this._refreshing = true;
         this._hasRefreshError = false;
 
@@ -304,17 +301,17 @@ const RedmineIssues = new Lang.Class({
                 }
             }
         }
-    },
+    }
 
-    _addOrRefreshIssue : function(issue){
+    _addOrRefreshIssue(issue){
         if(this._issuesStorage.addIssue(issue)) {
             this._addIssueMenuItem(issue);
         } else {
             this._refreshIssueMenuItem(issue);
         }
-    },
+    }
 
-    _loadIssues : function(filter, callback){
+    _loadIssues(filter, callback){
         this._debug('Load filter "' + filter + '"...');
         let url = this._buildRedmineUrl() + 'issues.json?' + filter;
         let request = Soup.Message.new('GET', url);
@@ -357,9 +354,9 @@ const RedmineIssues = new Lang.Class({
 
             this._continueOrFinishIssuesLoading(filter);
         }));
-    },
+    }
 
-    _continueOrFinishIssuesLoading : function(filter){
+    _continueOrFinishIssuesLoading(filter){
         let filterIndex = this._filtersForCheck.indexOf(filter);
         if (filterIndex > -1) {
             this._filtersForCheck.splice(filterIndex, 1);
@@ -372,9 +369,9 @@ const RedmineIssues = new Lang.Class({
                this._loadIssue(this._bookmarkIssuesForCheck[i], Lang.bind(this, this._addOrRefreshIssue));
            }
         }
-    },
+    }
 
-    _loadIssue : function(id, callback){
+    _loadIssue(id, callback){
         this._debug('Load issue #' + id + '...');
         id = parseInt(id, 10);
         let url = this._buildRedmineUrl() + 'issues/' + id + '.json';
@@ -400,15 +397,15 @@ const RedmineIssues = new Lang.Class({
             }
             this._continueOrFinishIssueLoading(id);
         }));
-    },
+    }
 
-    _notify : function(message, details){
+    _notify(message, details){
         if(!Main.messageTray.contains(this._source))
             Main.messageTray.add(this._source);
         this._source.notify(new MessageTray.Notification(this._source, message, details));
-    },
+    }
 
-    _continueOrFinishIssueLoading : function(id){
+    _continueOrFinishIssueLoading(id){
         if(this._bookmarkIssuesForCheck){
             let index = this._bookmarkIssuesForCheck.indexOf(id);
             if (index > -1) {
@@ -418,9 +415,9 @@ const RedmineIssues = new Lang.Class({
                 }
             }
         }
-    },
+    }
 
-    _finishRefresh : function(){
+    _finishRefresh(){
         this._refreshing = false;
 
         if(this._hasRefreshError){
@@ -441,16 +438,16 @@ const RedmineIssues = new Lang.Class({
         this._issuesStorage.save();
         if(this.commands.refreshButton.child) // for disabled state
             this.commands.refreshButton.child.icon_name ='view-refresh-symbolic';
-    },
+    }
 
-    _buildRedmineUrl : function(){
+    _buildRedmineUrl(){
         let redmineUrl = this._settings.get_string('redmine-url');
         if(redmineUrl && redmineUrl.slice(-1) != '/')
             redmineUrl += '/';
         return redmineUrl;
-    },
+    }
 
-    _toSortKey : function(issue, k){
+    _toSortKey(issue, k){
         if(k == 'id' || k == 'done_ratio')
             return issue[k] || -1;
         if(k == 'priority')
@@ -458,9 +455,9 @@ const RedmineIssues = new Lang.Class({
         if(k == 'updated_on' || k ==  'subject')
             return issue[k] || '';
         return issue[k] ? (issue[k].name || '') : '';
-    },
+    }
 
-    _refreshIssueMenuItem : function(newIssue) {
+    _refreshIssueMenuItem(newIssue) {
         let oldIssue = this._issuesStorage.issues[newIssue.id];
         if(!oldIssue) // for ignored issue
             return;
@@ -484,9 +481,9 @@ const RedmineIssues = new Lang.Class({
             item.makeUnread(newIssue);
             this._refreshGroupStyleClass(oldGroupKey);
         }
-    },
+    }
 
-    _addIssueClicked : function() {
+    _addIssueClicked() {
         let addIssueDialog = new AddIssueDialog.AddIssueDialog(Lang.bind(this, function(issueId){
             if(!issueId)
                 return;
@@ -500,9 +497,9 @@ const RedmineIssues = new Lang.Class({
         }));
         this.menu.close();
         addIssueDialog.open();
-    },
+    }
 
-    _removeIssueClicked : function(issue){
+    _removeIssueClicked(issue){
         let message = issue.ri_bookmark ?
             _('Are you sure you want to delete "%s"?').format(issue.subject) :
             _('Are you sure you want to delete "%s"?\nIssue will be added to ignore list').format(issue.subject)
@@ -517,9 +514,9 @@ const RedmineIssues = new Lang.Class({
         );
         this.menu.close();
         confirmDialog.open();
-    },
+    }
 
-    _removeIssueMenuItem : function(issue){
+    _removeIssueMenuItem(issue){
         let groupBy = this._settings.get_string('group-by');
 
         let groupId = issue[groupBy] ? issue[groupBy].id : -1;
@@ -533,9 +530,9 @@ const RedmineIssues = new Lang.Class({
         } else {
             this._refreshGroupStyleClass(groupId);
         }
-    },
+    }
 
-    _addIssueMenuItem : function(issue){
+    _addIssueMenuItem(issue){
         this._debug('Add issue menu item... #' + issue.id);
         let sortBy = this._settings.get_string('order-by');
         let item = new IssueItem.IssueItem(issue, this._toSortKey(issue, sortBy));
@@ -598,9 +595,9 @@ const RedmineIssues = new Lang.Class({
         issueItem.menu.addMenuItem(item.menuItem, issueIds.indexOf(item.issueId));
         this._refreshGroupStyleClass(groupId);
         this._debug('Finish add issue menu item #' + issue.id);
-    },
+    }
 
-    _refreshGroupStyleClass : function(groupId){
+    _refreshGroupStyleClass(groupId){
         let unread = false;
         for(let issueId in this._issueItems[groupId]){
             if(this._issuesStorage.issues[issueId].unread_fields.length > 0){
@@ -615,9 +612,9 @@ const RedmineIssues = new Lang.Class({
             this._issueGroupItems[groupId].actor.remove_style_class_name('ri-group-label-unread');
             this._refreshIcon();
         }
-    },
+    }
 
-    _refreshIcon : function(){
+    _refreshIcon(){
         let unread = false;
         for(let issueId in this._issuesStorage.issues){
             if(this._issuesStorage.issues[issueId].unread_fields.length > 0){
@@ -626,25 +623,25 @@ const RedmineIssues = new Lang.Class({
             }
         }
         this._extensionIcon.gicon = unread ? this._gicon_unread : this._gicon_read;
-    },
+    }
 
-    _makeMenuItemRead : function(item){
+    _makeMenuItemRead(item){
         item.makeRead();
         let issue = this._issuesStorage.issues[item.issueId];
         let groupByKey = this._settings.get_string('group-by');
         let groupId = issue[groupByKey] ? issue[groupByKey].id : -1;
         this._refreshGroupStyleClass(groupId);
-    },
+    }
 
-    _issueItemAtivated : function(item) {
+    _issueItemAtivated(item) {
         let url = this._buildRedmineUrl() + 'issues/' + item.issueId;
         Util.spawn(['xdg-open', url]);
         this._issuesStorage.updateIssueToRead(item.issueId);
         this._makeMenuItemRead(item);
         this._issuesStorage.save();
-    },
+    }
 
-    _convertIssueFromResponse : function(srcIssue){
+    _convertIssueFromResponse(srcIssue){
         let issue = {id:srcIssue.id, subject : srcIssue.subject, updated_on : srcIssue.updated_on};
         Сonstants.LABEL_KEYS.forEach(function(key){
             let value = srcIssue[key];
@@ -652,22 +649,22 @@ const RedmineIssues = new Lang.Class({
                 issue[key]=value;
         });
         return issue;
-    },
+    }
 
-    _openAppPreferences : function(){
+    _openAppPreferences(){
         Util.spawn(["gnome-shell-extension-prefs", "redmineIssues@UshakovVasilii_Github.yahoo.com"]);
         this.menu.close();
-    },
+    }
 
-    _debug : function(message){
+    _debug(message){
         if(this._debugEnabled)
             global.log('[redmine-issues] ' + message);
-    },
+    }
 
 });
 
 function init() {
-    Convenience.initTranslations();
+    ExtensionUtils.initTranslations();
 };
 
 function enable() {
@@ -679,4 +676,3 @@ function disable() {
     redmineIssues.destroy();
     redmineIssues=null;
 };
-

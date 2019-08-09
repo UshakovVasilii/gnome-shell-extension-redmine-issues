@@ -7,14 +7,12 @@ const _ = Gettext.gettext;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Convenience = Me.imports.convenience;
 const Сonstants = Me.imports.constants;
 
-const IssueItem = new Lang.Class({
-    Name: 'IssueItem',
+const IssueItem = class {
 
-    _init: function(issue, sortKey){
-        this._settings = Convenience.getSettings();
+    constructor(issue, sortKey){
+        this._settings = ExtensionUtils.getSettings();
 
         this.menuItem = new PopupMenu.PopupBaseMenuItem();
         this.issueId = issue.id;
@@ -51,30 +49,30 @@ const IssueItem = new Lang.Class({
             child: new St.Icon({icon_name: 'list-remove-symbolic', style_class: 'ri-issue-icon'})
         });
         this._buttonBox.add(this.removeIssueButton);
-    },
+    }
 
-    refreshBookmarkButton : function(ri_bookmark){
+    refreshBookmarkButton(ri_bookmark){
         this.bookmarkButton.child.icon_name = ri_bookmark ? 'user-bookmarks-symbolic' : 'bookmark-new-symbolic';
-    },
+    }
 
-    setMaxWidth : function(width){
+    setMaxWidth(width){
         this._label.style = 'max-width:' + width + 'px';
-    },
+    }
 
-    _showMarkReadButton : function(){
+    _showMarkReadButton(){
         if(this.isMarkReadButtonShown)
             return;
         this._buttonBox.insert_child_at_index(this.markReadButton, 0);
         this.isMarkReadButtonShown = true;
-    },
+    }
 
-    _addStatusLabel : function(key, text, styleClass){
+    _addStatusLabel(key, text, styleClass){
         let label = new St.Label({text: text, style_class: styleClass});
         this._statusLabels[key] = label;
         this._statusLabelBox.add(label);
-    },
+    }
 
-    _addStatusLabels : function(issue){
+    _addStatusLabels(issue){
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
             if(!this._settings.get_boolean('show-status-item-' + key.replace('_','-')))
                 return;
@@ -85,17 +83,17 @@ const IssueItem = new Lang.Class({
                 this._addStatusLabel(key, issue[key].name, styleClass);
             }
         }));
-    },
+    }
 
-    reloadStatusLabels : function(issue){
+    reloadStatusLabels(issue){
         for(let labelKey in this._statusLabels){
             this._statusLabels[labelKey].destroy();
         }
         this._statusLabels = {};
         this._addStatusLabels(issue);
-    },
+    }
 
-    _makeLabelNew : function(key, text){
+    _makeLabelNew(key, text){
         let label = this._statusLabels[key];
         if(label) {
             label.style_class = 'ri-popup-status-menu-item-new';
@@ -103,9 +101,9 @@ const IssueItem = new Lang.Class({
         } else {
             this._addStatusLabel(key, text, 'ri-popup-status-menu-item-new');
         }
-    },
+    }
 
-    makeRead : function(){
+    makeRead(){
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
             let label = this._statusLabels[key];
             if(label)
@@ -116,9 +114,9 @@ const IssueItem = new Lang.Class({
             this._buttonBox.remove_child(this.markReadButton);
             this.isMarkReadButtonShown = false;
         }
-    },
+    }
 
-    makeUnread : function(issue){
+    makeUnread(issue){
         this._label.add_style_class_name('ri-issue-label-unread');
         this._showMarkReadButton();
         Сonstants.LABEL_KEYS.forEach(Lang.bind(this, function(key){
@@ -132,4 +130,4 @@ const IssueItem = new Lang.Class({
         }
     }
 
-});
+};
